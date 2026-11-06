@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juntar PDFs em um só</title>
+    <link rel="icon" type="image/png" href="img/Logo%20moderno%20de%20editor%20de%20PDF.png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="Padrao.css">
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <header class="app-header">
+            <div class="app-brand">
+                <img class="app-logo" src="img/Logo%20moderno%20de%20editor%20de%20PDF.png" alt="Logo do editor de PDF">
+                <div>
+                    <h1>Ferramentas de PDF</h1>
+                    <p>Junte vários PDFs, organize páginas ou extraia páginas para criar um novo arquivo.</p>
+                </div>
+            </div>
+            <button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false">
+                <span id="theme-icon" aria-hidden="true">🌙</span>
+                <span id="theme-label">Modo escuro</span>
+            </button>
+        </header>
+
+        <div class="tabs" role="tablist" aria-label="Ferramentas de PDF">
+            <button class="tab" id="merge-tab" type="button" role="tab" aria-selected="true" aria-controls="merge-panel">Juntar PDFs</button>
+            <button class="tab" id="extract-tab" type="button" role="tab" aria-selected="false" aria-controls="extract-panel">Extrair páginas</button>
+        </div>
+
+        <section id="merge-panel" role="tabpanel" aria-labelledby="merge-tab">
+            <div class="dropzone" onclick="document.getElementById('pdf-inputs').click()">
+                <span style="font-size: 36px;">📄</span>
+                <p style="margin: 10px 0 0 0; font-weight: 500;">Clique ou arraste arquivos PDF para adicioná-los</p>
+                <input type="file" id="pdf-inputs" accept=".pdf" multiple>
+            </div>
+
+            <p id="merge-order-help">Adicione dois ou mais PDFs. Arraste os arquivos para ordenar documentos e arraste as miniaturas (ou use as setas) para ordenar páginas.</p>
+            <div class="file-list" id="file-list" aria-describedby="merge-order-help"></div>
+
+            <section class="preview-section" aria-labelledby="merge-preview-title">
+                <div class="preview-heading">
+                    <h2 id="merge-preview-title">Pré-visualização do PDF unido</h2>
+                    <span id="merge-preview-count" aria-live="polite"></span>
+                </div>
+                <div id="merge-preview-message" class="preview-message">Adicione pelo menos dois PDFs para ver e organizar as páginas na ordem final.</div>
+                <div id="merge-preview-grid" class="merge-preview-grid" aria-label="Páginas do PDF unido" hidden></div>
+            </section>
+
+            <label class="filename-field" for="output-name">
+                Nome do arquivo combinado
+                <input class="form-control" type="text" id="output-name" value="documento_combinado" maxlength="100" placeholder="Digite o nome do PDF">
+            </label>
+
+            <button class="btn btn-primary" id="merge-btn" disabled>Mesclar e Baixar PDF Novo</button>
+        </section>
+
+        <section id="extract-panel" role="tabpanel" aria-labelledby="extract-tab" hidden>
+            <div class="dropzone" onclick="document.getElementById('extract-input').click()">
+                <span style="font-size: 36px;">📄</span>
+                <p style="margin: 10px 0 0 0; font-weight: 500;">Clique ou arraste um arquivo PDF para esta área</p>
+                <input type="file" id="extract-input" accept=".pdf">
+            </div>
+            <label class="extract-mode-toggle form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="split-mode" disabled>
+                <span class="form-check-label">Dividir em vários PDFs (baixar em ZIP)</span>
+            </label>
+            <p id="extract-help">Sem divisão, as páginas selecionadas serão baixadas em um único PDF.</p>
+            <div id="split-controls" hidden>
+                <div class="split-toolbar">
+                    <span>Selecione as páginas de cada PDF:</span>
+                    <div class="page-preview-actions">
+                        <button class="btn btn-outline-secondary btn-sm" id="add-split-part" type="button" disabled>Adicionar PDF</button>
+                        <button class="btn btn-outline-secondary btn-sm" id="remove-split-part" type="button" disabled>Remover atual</button>
+                    </div>
+                </div>
+                <div class="file-list extract-document-list" id="extract-file-list" aria-label="PDFs fracionados"></div>
+            </div>
+            <div class="page-preview-toolbar">
+                <span id="selection-count" aria-live="polite">Nenhuma página selecionada</span>
+                <div class="page-preview-actions">
+                    <button class="btn btn-outline-secondary btn-sm" id="select-all-pages" type="button" disabled>Selecionar todas</button>
+                    <button class="btn btn-outline-secondary btn-sm" id="clear-pages" type="button" disabled>Limpar</button>
+                </div>
+            </div>
+            <div class="page-preview" id="page-preview" aria-label="Pré-visualização das páginas do PDF"></div>
+
+            <label class="filename-field" for="page-selection">
+                Páginas para extrair
+                <input class="form-control" type="text" id="page-selection" placeholder="Ex.: 1, 3-5" aria-describedby="page-selection-help">
+            </label>
+            <p id="page-selection-help">Informe números de páginas separados por vírgula. Use hífen para intervalos, por exemplo: 1, 3-5.</p>
+
+            <label class="filename-field" for="extract-output-name">
+                <span id="extract-output-label">Nome do novo arquivo PDF</span>
+                <input class="form-control" type="text" id="extract-output-name" value="paginas_extraidas" maxlength="100" placeholder="Digite o nome do arquivo">
+            </label>
+
+            <button class="btn btn-primary" id="extract-btn" disabled>Extrair e Baixar PDF</button>
+        </section>
+
+        <div class="status" id="status-msg"></div>
+    </div>
+
+    <script src="JavaScript.js"></script>
+</body>
+</html>
