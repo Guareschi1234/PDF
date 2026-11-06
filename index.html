@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juntar PDFs em um só</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --primary-color: #d18a16;
+            --primary-hover: #aa6b08;
+            --accent-color: #31566b;
+            --background: #edf1f2;
+            --card-bg: #ffffff;
+            --text-main: #26343a;
+            --text-muted: #68777e;
+            --border: #d4dde0;
+            --surface: #f4f7f7;
+            --surface-raised: #ffffff;
+            --dropzone-bg: #f7f9f8;
+            --dropzone-active: #fff3d9;
+            --preview-bg: #e8edef;
+            --selected-bg: #fff4dc;
+            --shadow-color: #23343d1c;
+        }
+
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --primary-color: #f2b544;
+            --primary-hover: #ffc95e;
+            --accent-color: #8eb6c5;
+            --background: #151c20;
+            --card-bg: #202a30;
+            --text-main: #edf2f2;
+            --text-muted: #a4b2b7;
+            --border: #3b494f;
+            --surface: #263238;
+            --surface-raised: #2b383e;
+            --dropzone-bg: #253137;
+            --dropzone-active: #3d3526;
+            --preview-bg: #1a2328;
+            --selected-bg: #403722;
+            --shadow-color: #00000052;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: radial-gradient(ellipse at top, color-mix(in srgb, var(--accent-color) 13%, var(--background)) 0%, var(--background) 54%);
+            color: var(--text-main);
+            margin: 0;
+            padding: clamp(16px, 4vw, 48px) 16px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            box-sizing: border-box;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: clamp(18px, 4vw, 36px);
+            border-radius: 20px;
+            box-shadow: 0 24px 70px -35px var(--shadow-color), 0 8px 24px -18px var(--shadow-color);
+            width: 100%;
+            max-width: 900px;
+            text-align: center;
+            box-sizing: border-box;
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 22px;
+            text-align: left;
+        }
+
+        .app-header p {
+            margin-bottom: 0;
+        }
+
+        .theme-toggle {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 42px;
+            padding: 9px 13px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface-raised);
+            color: var(--text-main);
+            font: inherit;
+            font-size: 13px;
+            font-weight: 650;
+            cursor: pointer;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--primary-color);
+        }
+
+        h1 {
+            font-size: clamp(24px, 4vw, 30px);
+            letter-spacing: -0.7px;
+            margin: 0 0 8px;
+            color: var(--text-main);
+        }
+
+        p {
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 0 0 24px;
+        }
+
+        .dropzone {
+            border: 2px dashed var(--border);
+            padding: 32px 20px;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+            margin-bottom: 16px;
+            background: var(--dropzone-bg);
+        }
+
+        .dropzone:hover {
+            border-color: var(--primary-color);
+            background: var(--selected-bg);
+        }
+
+        .dropzone.drag-over {
+            border-color: var(--primary-color);
+            background-color: var(--dropzone-active);
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-color) 18%, transparent);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 6px;
+            padding: 5px;
+            margin-bottom: 24px;
+            border-radius: 12px;
+            background: var(--surface);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 8px;
+            border: 0;
+            border-radius: 9px;
+            background: transparent;
+            color: var(--text-main);
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+        }
+
+        .tab[aria-selected="true"] {
+            background: var(--surface-raised);
+            color: var(--primary-color);
+            box-shadow: 0 2px 8px var(--shadow-color);
+        }
+
+        .dropzone input {
+            display: none;
+        }
+
+        .file-list {
+            text-align: left;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .file-item {
+            background: var(--surface-raised);
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 9px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px var(--shadow-color);
+        }
+
+        .merge-file-item {
+            cursor: grab;
+            transition: border-color 0.15s, background-color 0.15s, transform 0.15s, opacity 0.15s;
+        }
+
+        .merge-file-item:active {
+            cursor: grabbing;
+            transform: scale(0.995);
+        }
+
+        .merge-file-item.is-dragging {
+            opacity: 0.45;
+        }
+
+        .merge-file-item.drag-target {
+            border-color: var(--primary-color);
+            background: var(--selected-bg);
+        }
+
+        .merge-file-name {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .file-item-remove {
+            flex: 0 0 auto;
+            margin-left: 10px;
+            padding: 5px 8px;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            background: var(--surface-raised);
+            color: #a03d44;
+            cursor: pointer;
+        }
+
+        .file-item-remove:hover {
+            border-color: #c97b69;
+            background: var(--selected-bg);
+        }
+
+        .preview-section {
+            margin: 26px 0 22px;
+            padding: 18px;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: var(--surface);
+            text-align: left;
+        }
+
+        .preview-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .preview-heading h2 {
+            margin: 0;
+            font-size: 16px;
+            letter-spacing: -0.2px;
+        }
+
+        .preview-heading span,
+        .preview-message {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .preview-message {
+            padding: 14px;
+            border: 1px dashed var(--border);
+            border-radius: 9px;
+            background: var(--surface-raised);
+            text-align: center;
+        }
+
+        .merge-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 12px;
+            max-height: 440px;
+            overflow: auto;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--preview-bg);
+            touch-action: pan-y;
+        }
+
+        .merge-preview-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 7px;
+            min-width: 0;
+            padding: 9px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: var(--surface-raised);
+            color: var(--text-muted);
+            font-size: 11px;
+            text-align: center;
+        }
+
+        .merge-preview-page canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            background: #ffffff;
+            box-shadow: 0 3px 12px var(--shadow-color);
+        }
+
+        .merge-preview-page {
+            position: relative;
+            cursor: grab;
+            user-select: none;
+        }
+
+        .merge-preview-page:active {
+            cursor: grabbing;
+        }
+
+        .merge-preview-page.is-dragging {
+            opacity: 0.45;
+        }
+
+        .merge-preview-page.drag-target {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 1px;
+        }
+
+        .merge-page-controls {
+            display: flex;
+            gap: 6px;
+            margin-top: 2px;
+        }
+
+        .merge-page-controls button {
+            min-width: 34px;
+            min-height: 32px;
+            padding: 4px 9px;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            background: var(--surface);
+            color: var(--text-main);
+            font: inherit;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .merge-page-controls button:hover:not(:disabled) {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .merge-page-controls button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .merge-preview-source {
+            max-width: 100%;
+            overflow: hidden;
+            color: var(--text-muted);
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .page-preview-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin: 8px 0;
+            text-align: left;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .page-preview-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .page-preview-actions button {
+            padding: 6px 9px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            background: var(--surface-raised);
+            color: var(--text-main);
+            cursor: pointer;
+        }
+
+        .page-preview-actions button:hover {
+            border-color: var(--primary-color);
+        }
+
+        .page-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 12px;
+            max-height: 480px;
+            overflow: auto;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface);
+        }
+
+        .page-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 7px;
+            min-width: 0;
+            padding: 8px;
+            border: 2px solid transparent;
+            border-radius: 9px;
+            background: var(--surface-raised);
+            color: var(--text-main);
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .page-card[aria-pressed="true"] {
+            border-color: var(--primary-color);
+            background: var(--selected-bg);
+        }
+
+        .page-card:focus-visible,
+        .page-preview-actions button:focus-visible {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+
+        .page-card canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            background: #ffffff;
+            box-shadow: 0 1px 4px var(--shadow-color);
+        }
+
+        .filename-field {
+            display: block;
+            margin-bottom: 20px;
+            text-align: left;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .filename-field input {
+            display: block;
+            box-sizing: border-box;
+            width: 100%;
+            margin-top: 8px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            font: inherit;
+            font-weight: 400;
+            background: var(--surface-raised);
+            color: var(--text-main);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .filename-field input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 20%, transparent);
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 7px 16px color-mix(in srgb, var(--primary-color) 24%, transparent);
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 9px 20px color-mix(in srgb, var(--primary-color) 28%, transparent);
+        }
+
+        .btn:disabled {
+            background-color: #94a3b8;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .status {
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: 500;
+            white-space: pre-line;
+            text-align: left;
+            background: var(--surface);
+            padding: 12px 14px;
+            border-radius: 9px;
+            border: 1px solid var(--border);
+            display: none;
+        }
+
+        @media (min-width: 601px) {
+            body {
+                padding: 0;
+            }
+
+            .container {
+                max-width: none;
+                min-height: 100vh;
+                padding: clamp(28px, 3vw, 48px) clamp(24px, 4vw, 64px);
+                border-radius: 0;
+                box-shadow: none;
+            }
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 18px 12px;
+            }
+
+            .container {
+                padding: 24px 18px;
+                border-radius: 15px;
+            }
+
+            h1 {
+                font-size: 25px;
+            }
+
+            .app-header {
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .theme-toggle {
+                min-height: 40px;
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+
+            .preview-section {
+                padding: 13px;
+            }
+
+            .merge-preview-grid {
+                grid-template-columns: repeat(auto-fill, minmax(min(105px, 100%), 1fr));
+                gap: 8px;
+                padding: 8px;
+            }
+
+            .page-preview {
+                grid-template-columns: repeat(auto-fill, minmax(min(105px, 100%), 1fr));
+                gap: 8px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .app-header {
+                flex-direction: column;
+            }
+
+            .theme-toggle {
+                align-self: flex-end;
+            }
+
+            .preview-heading {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .dropzone {
+                padding: 24px 14px;
+            }
+
+            .tabs {
+                gap: 3px;
+            }
+
+            .tab {
+                padding: 11px 5px;
+                font-size: 13px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                scroll-behavior: auto !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <header class="app-header">
+            <div>
+                <h1>Ferramentas de PDF</h1>
+                <p>Junte vários PDFs, organize páginas ou extraia páginas para criar um novo arquivo.</p>
+            </div>
+            <button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false">
+                <span id="theme-icon" aria-hidden="true">🌙</span>
+                <span id="theme-label">Modo escuro</span>
+            </button>
+        </header>
+
+        <div class="tabs" role="tablist" aria-label="Ferramentas de PDF">
+            <button class="tab" id="merge-tab" type="button" role="tab" aria-selected="true" aria-controls="merge-panel">Juntar PDFs</button>
+            <button class="tab" id="extract-tab" type="button" role="tab" aria-selected="false" aria-controls="extract-panel">Extrair páginas</button>
+        </div>
+
+        <section id="merge-panel" role="tabpanel" aria-labelledby="merge-tab">
+            <div class="dropzone" onclick="document.getElementById('pdf-inputs').click()">
+                <span style="font-size: 36px;">📄</span>
+                <p style="margin: 10px 0 0 0; font-weight: 500;">Clique ou arraste arquivos PDF para adicioná-los</p>
+                <input type="file" id="pdf-inputs" accept=".pdf" multiple>
+            </div>
+
+            <p id="merge-order-help">Adicione dois ou mais PDFs. Arraste os arquivos para ordenar documentos e arraste as miniaturas (ou use as setas) para ordenar páginas.</p>
+            <div class="file-list" id="file-list" aria-describedby="merge-order-help"></div>
+
+            <section class="preview-section" aria-labelledby="merge-preview-title">
+                <div class="preview-heading">
+                    <h2 id="merge-preview-title">Pré-visualização do PDF unido</h2>
+                    <span id="merge-preview-count" aria-live="polite"></span>
+                </div>
+                <div id="merge-preview-message" class="preview-message">Adicione pelo menos dois PDFs para ver e organizar as páginas na ordem final.</div>
+                <div id="merge-preview-grid" class="merge-preview-grid" aria-label="Páginas do PDF unido" hidden></div>
+            </section>
+
+            <label class="filename-field" for="output-name">
+                Nome do arquivo combinado
+                <input type="text" id="output-name" value="documento_combinado" maxlength="100" placeholder="Digite o nome do PDF">
+            </label>
+
+            <button class="btn" id="merge-btn" disabled>Mesclar e Baixar PDF Novo</button>
+        </section>
+
+        <section id="extract-panel" role="tabpanel" aria-labelledby="extract-tab" hidden>
+            <div class="dropzone" onclick="document.getElementById('extract-input').click()">
+                <span style="font-size: 36px;">📄</span>
+                <p style="margin: 10px 0 0 0; font-weight: 500;">Clique ou arraste 1 arquivo PDF para esta área</p>
+                <input type="file" id="extract-input" accept=".pdf">
+            </div>
+            <div class="file-list" id="extract-file-list"></div>
+            <div class="page-preview-toolbar">
+                <span id="selection-count" aria-live="polite">Nenhuma página selecionada</span>
+                <div class="page-preview-actions">
+                    <button id="select-all-pages" type="button" disabled>Selecionar todas</button>
+                    <button id="clear-pages" type="button" disabled>Limpar</button>
+                </div>
+            </div>
+            <div class="page-preview" id="page-preview" aria-label="Pré-visualização das páginas do PDF"></div>
+
+            <label class="filename-field" for="page-selection">
+                Páginas para extrair
+                <input type="text" id="page-selection" placeholder="Ex.: 1, 3-5" aria-describedby="page-selection-help">
+            </label>
+            <p id="page-selection-help">Informe números de páginas separados por vírgula. Use hífen para intervalos, por exemplo: 1, 3-5.</p>
+
+            <label class="filename-field" for="extract-output-name">
+                Nome do novo arquivo PDF
+                <input type="text" id="extract-output-name" value="paginas_extraidas" maxlength="100" placeholder="Digite o nome do PDF">
+            </label>
+
+            <button class="btn" id="extract-btn" disabled>Extrair e Baixar PDF</button>
+        </section>
+
+        <div class="status" id="status-msg"></div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('pdf-inputs');
+        const extractInput = document.getElementById('extract-input');
+        const fileListContainer = document.getElementById('file-list');
+        const mergeBtn = document.getElementById('merge-btn');
+        const extractBtn = document.getElementById('extract-btn');
+        const statusMsg = document.getElementById('status-msg');
+        const outputNameInput = document.getElementById('output-name');
+        const extractOutputNameInput = document.getElementById('extract-output-name');
+        const pageSelectionInput = document.getElementById('page-selection');
+        const extractFileList = document.getElementById('extract-file-list');
+        const pagePreview = document.getElementById('page-preview');
+        const selectionCount = document.getElementById('selection-count');
+        const selectAllPagesButton = document.getElementById('select-all-pages');
+        const clearPagesButton = document.getElementById('clear-pages');
+        const mergeTab = document.getElementById('merge-tab');
+        const extractTab = document.getElementById('extract-tab');
+        const mergePanel = document.getElementById('merge-panel');
+        const extractPanel = document.getElementById('extract-panel');
+        const mergePreviewGrid = document.getElementById('merge-preview-grid');
+        const mergePreviewMessage = document.getElementById('merge-preview-message');
+        const mergePreviewCount = document.getElementById('merge-preview-count');
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const themeLabel = document.getElementById('theme-label');
+
+        let selectedFiles = [];
+        let mergePreviewGeneration = 0;
+        let mergeOrderRevision = 0;
+        let mergePreviewPromise = null;
+        let mergePreviewPromiseGeneration = -1;
+        let mergePreviewResult = null;
+        let mergePreviewResultGeneration = -1;
+        let mergePreviewLoadingTask = null;
+        let mergePreviewObserver = null;
+        let extractFile = null;
+        let extractPageCount = 0;
+        let previewDocument = null;
+        let previewLoadingTask = null;
+        let previewObserver = null;
+        let previewLoadId = 0;
+        const selectedPages = new Set();
+
+        function applyTheme(theme) {
+            const isDark = theme === 'dark';
+            document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+            themeToggle.setAttribute('aria-pressed', String(isDark));
+            themeIcon.textContent = isDark ? '☀️' : '🌙';
+            themeLabel.textContent = isDark ? 'Modo claro' : 'Modo escuro';
+            themeToggle.setAttribute('aria-label', isDark ? 'Ativar modo claro' : 'Ativar modo escuro');
+        }
+
+        try {
+            applyTheme(localStorage.getItem('juntar-pdf-theme') || 'light');
+        } catch (error) {
+            console.warn('Não foi possível carregar a preferência de tema salva.', error);
+            applyTheme('light');
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+            applyTheme(theme);
+            try {
+                localStorage.setItem('juntar-pdf-theme', theme);
+            } catch (error) {
+                console.warn('Não foi possível salvar a preferência de tema.', error);
+            }
+        });
+
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc =
+                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        function setActiveTab(tab) {
+            const showMerge = tab === 'merge';
+            mergeTab.setAttribute('aria-selected', String(showMerge));
+            extractTab.setAttribute('aria-selected', String(!showMerge));
+            mergePanel.hidden = !showMerge;
+            extractPanel.hidden = showMerge;
+            statusMsg.style.display = 'none';
+            statusMsg.innerText = '';
+        }
+
+        mergeTab.addEventListener('click', () => setActiveTab('merge'));
+        extractTab.addEventListener('click', () => setActiveTab('extract'));
+
+        function enableFileDrop(dropzone, input) {
+            let dragDepth = 0;
+
+            dropzone.addEventListener('dragenter', (event) => {
+                event.preventDefault();
+                dragDepth += 1;
+                dropzone.classList.add('drag-over');
+            });
+
+            dropzone.addEventListener('dragover', (event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'copy';
+            });
+
+            dropzone.addEventListener('dragleave', (event) => {
+                event.preventDefault();
+                dragDepth = Math.max(0, dragDepth - 1);
+                if (dragDepth === 0) dropzone.classList.remove('drag-over');
+            });
+
+            dropzone.addEventListener('drop', (event) => {
+                event.preventDefault();
+                dragDepth = 0;
+                dropzone.classList.remove('drag-over');
+
+                const files = event.dataTransfer.files;
+                if (!files.length) return;
+
+                const transfer = new DataTransfer();
+                Array.from(files).forEach((file) => transfer.items.add(file));
+                input.files = transfer.files;
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        }
+
+        enableFileDrop(document.querySelector('#merge-panel .dropzone'), fileInput);
+        enableFileDrop(document.querySelector('#extract-panel .dropzone'), extractInput);
+
+        document.addEventListener('dragover', (event) => {
+            if (event.dataTransfer.types.includes('Files')) event.preventDefault();
+        });
+        document.addEventListener('drop', (event) => {
+            if (event.dataTransfer.types.includes('Files')) event.preventDefault();
+        });
+
+        fileInput.addEventListener('change', (event) => {
+            const files = Array.from(event.target.files);
+            fileInput.value = '';
+            if (!files.length) return;
+
+            const invalidFile = files.find((file) => !file.name.toLowerCase().endsWith('.pdf'));
+            if (invalidFile) {
+                showStatus(`"${invalidFile.name}" não é um arquivo PDF. Nenhum arquivo deste grupo foi adicionado.`, '#dc2626');
+                return;
+            }
+
+            selectedFiles.push(...files);
+            renderFiles();
+            showStatus(`${files.length} PDF(s) adicionado(s). Total: ${selectedFiles.length}.`, '#16a34a');
+        });
+
+        function showStatus(message, color = 'var(--text-main)') {
+            statusMsg.style.display = 'block';
+            statusMsg.style.color = color;
+            statusMsg.innerText = message;
+        }
+
+        function getSafeOutputName(input) {
+            return input.value
+                .trim()
+                .replace(/\.pdf$/i, '')
+                .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '_')
+                .replace(/[. ]+$/, '');
+        }
+
+        function downloadPdf(bytes, filename) {
+            const blob = new Blob([bytes], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${filename}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        async function createMergedPdfData(files, onProgress = () => {}) {
+            const mergedPdf = await PDFLib.PDFDocument.create();
+            const pageSources = [];
+            const sourceDocuments = [];
+            const pageOrder = [];
+
+            for (let index = 0; index < files.length; index += 1) {
+                const file = files[index];
+                onProgress(index, file);
+                const pdf = await PDFLib.PDFDocument.load(await file.arrayBuffer());
+                sourceDocuments.push(pdf);
+                const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                copiedPages.forEach((page) => mergedPdf.addPage(page));
+                pageSources.push(...Array(copiedPages.length).fill(file.name));
+                for (let pageIndex = 0; pageIndex < copiedPages.length; pageIndex += 1) {
+                    pageOrder.push({ fileIndex: index, pageIndex, source: file.name });
+                }
+            }
+
+            return { bytes: await mergedPdf.save(), pageSources, pageOrder, sourceDocuments };
+        }
+
+        async function createPdfInPageOrder(data) {
+            const orderedPdf = await PDFLib.PDFDocument.create();
+            for (const page of data.pageOrder) {
+                const [copiedPage] = await orderedPdf.copyPages(
+                    data.sourceDocuments[page.fileIndex],
+                    [page.pageIndex]
+                );
+                orderedPdf.addPage(copiedPage);
+            }
+            return orderedPdf.save();
+        }
+
+        function renderMergedPage(pageNumber, canvas, generation) {
+            if (!mergePreviewLoadingTask || generation !== mergePreviewGeneration) return;
+
+            mergePreviewLoadingTask.promise.then((document) => {
+                if (generation !== mergePreviewGeneration) return;
+                return document.getPage(pageNumber).then((page) => {
+                    if (generation !== mergePreviewGeneration) return;
+                    const originalViewport = page.getViewport({ scale: 1 });
+                    const scale = Math.min(1, 220 / originalViewport.width, 300 / originalViewport.height);
+                    const viewport = page.getViewport({ scale });
+                    canvas.width = Math.ceil(viewport.width);
+                    canvas.height = Math.ceil(viewport.height);
+                    return page.render({
+                        canvasContext: canvas.getContext('2d'),
+                        viewport
+                    }).promise;
+                });
+            }).catch((error) => {
+                if (generation === mergePreviewGeneration) {
+                    console.error(error);
+                    mergePreviewMessage.hidden = false;
+                    mergePreviewMessage.textContent = 'Não foi possível mostrar a pré-visualização deste PDF.';
+                }
+            });
+        }
+
+        async function showMergedPreview(data, generation) {
+            if (generation !== mergePreviewGeneration) return;
+
+            if (mergePreviewObserver) mergePreviewObserver.disconnect();
+            if (mergePreviewLoadingTask) {
+                mergePreviewLoadingTask.destroy().catch((error) => {
+                    console.error('Não foi possível encerrar a pré-visualização anterior do PDF unido.', error);
+                });
+            }
+            mergePreviewLoadingTask = pdfjsLib.getDocument({ data: data.bytes.slice(0) });
+            const pdfDocument = await mergePreviewLoadingTask.promise;
+            if (generation !== mergePreviewGeneration) return;
+
+            mergePreviewMessage.hidden = true;
+            mergePreviewGrid.hidden = false;
+            mergePreviewGrid.innerHTML = '';
+            mergePreviewCount.textContent = `${pdfDocument.numPages} ${pdfDocument.numPages === 1 ? 'página' : 'páginas'}`;
+
+            if (mergePreviewObserver) mergePreviewObserver.disconnect();
+            mergePreviewObserver = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (!entry.isIntersecting) return;
+                    const card = entry.target;
+                    mergePreviewObserver.unobserve(card);
+                    renderMergedPage(Number(card.dataset.page), card.querySelector('canvas'), generation);
+                });
+            }, { root: mergePreviewGrid, rootMargin: '120px' });
+
+            for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
+                const card = document.createElement('div');
+                const canvas = document.createElement('canvas');
+                const label = document.createElement('span');
+                const source = document.createElement('span');
+                const controls = document.createElement('div');
+                const moveUpButton = document.createElement('button');
+                const moveDownButton = document.createElement('button');
+                const page = data.pageOrder[pageNumber - 1];
+                card.className = 'merge-preview-page';
+                card.dataset.page = String(pageNumber);
+                card.draggable = true;
+                label.textContent = `Página ${pageNumber}`;
+                source.className = 'merge-preview-source';
+                source.textContent = page.source;
+                source.title = page.source;
+                controls.className = 'merge-page-controls';
+                moveUpButton.type = 'button';
+                moveUpButton.textContent = '↑';
+                moveUpButton.setAttribute('aria-label', `Mover página ${pageNumber} para cima`);
+                moveUpButton.disabled = pageNumber === 1;
+                moveUpButton.addEventListener('click', () => moveMergedPage(pageNumber - 1, pageNumber - 2, generation));
+                moveDownButton.type = 'button';
+                moveDownButton.textContent = '↓';
+                moveDownButton.setAttribute('aria-label', `Mover página ${pageNumber} para baixo`);
+                moveDownButton.disabled = pageNumber === pdfDocument.numPages;
+                moveDownButton.addEventListener('click', () => moveMergedPage(pageNumber - 1, pageNumber, generation));
+                controls.append(moveUpButton, moveDownButton);
+                card.append(canvas, label, source, controls);
+                card.addEventListener('dragstart', (event) => {
+                    event.dataTransfer.setData('text/plain', String(pageNumber - 1));
+                    event.dataTransfer.effectAllowed = 'move';
+                    card.classList.add('is-dragging');
+                });
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('is-dragging');
+                    mergePreviewGrid.querySelectorAll('.drag-target').forEach((target) => {
+                        target.classList.remove('drag-target');
+                    });
+                });
+                card.addEventListener('dragover', (event) => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = 'move';
+                    card.classList.add('drag-target');
+                });
+                card.addEventListener('dragleave', () => card.classList.remove('drag-target'));
+                card.addEventListener('drop', (event) => {
+                    event.preventDefault();
+                    card.classList.remove('drag-target');
+                    const fromIndex = Number(event.dataTransfer.getData('text/plain'));
+                    moveMergedPage(fromIndex, pageNumber - 1, generation);
+                });
+                mergePreviewGrid.appendChild(card);
+                mergePreviewObserver.observe(card);
+            }
+        }
+
+        async function moveMergedPage(fromIndex, toIndex, generation) {
+            const data = mergePreviewResult;
+            if (!data || generation !== mergePreviewGeneration ||
+                fromIndex < 0 || toIndex < 0 || fromIndex >= data.pageOrder.length ||
+                toIndex >= data.pageOrder.length || fromIndex === toIndex) {
+                return;
+            }
+
+            const revision = ++mergeOrderRevision;
+            const [movedPage] = data.pageOrder.splice(fromIndex, 1);
+            data.pageOrder.splice(toIndex, 0, movedPage);
+            mergeBtn.disabled = true;
+            mergePreviewGrid.hidden = true;
+            mergePreviewMessage.hidden = false;
+            mergePreviewMessage.textContent = 'Atualizando a ordem das páginas...';
+
+            try {
+                data.bytes = await createPdfInPageOrder(data);
+                if (revision !== mergeOrderRevision || generation !== mergePreviewGeneration) return;
+                await showMergedPreview(data, generation);
+            } catch (error) {
+                if (revision !== mergeOrderRevision || generation !== mergePreviewGeneration) return;
+                console.error(error);
+                const details = error instanceof Error ? error.message : String(error);
+                data.pageOrder.splice(toIndex, 1);
+                data.pageOrder.splice(fromIndex, 0, movedPage);
+                try {
+                    await showMergedPreview(data, generation);
+                } catch (previewError) {
+                    console.error('Não foi possível restaurar a pré-visualização anterior.', previewError);
+                }
+                showStatus(`❌ Não foi possível atualizar a ordem das páginas.\nDetalhe: ${details}`, '#dc2626');
+            } finally {
+                if (revision === mergeOrderRevision && generation === mergePreviewGeneration) {
+                    mergeBtn.disabled = selectedFiles.length < 2;
+                }
+            }
+        }
+
+        function updateMergedPreview() {
+            const generation = ++mergePreviewGeneration;
+            mergeOrderRevision += 1;
+            mergePreviewResult = null;
+            mergePreviewResultGeneration = -1;
+            mergePreviewGrid.hidden = true;
+            mergePreviewGrid.innerHTML = '';
+            mergePreviewCount.textContent = '';
+            if (mergePreviewObserver) mergePreviewObserver.disconnect();
+            if (mergePreviewLoadingTask) {
+                mergePreviewLoadingTask.destroy().catch((error) => {
+                    console.error('Não foi possível encerrar a pré-visualização anterior do PDF unido.', error);
+                });
+            }
+            mergePreviewLoadingTask = null;
+
+            if (selectedFiles.length < 2) {
+                mergePreviewMessage.hidden = false;
+                mergePreviewMessage.textContent = 'Adicione pelo menos dois PDFs para ver as páginas na ordem final.';
+                mergePreviewPromise = null;
+                return;
+            }
+
+            if (!window.PDFLib || !window.pdfjsLib) {
+                mergePreviewMessage.hidden = false;
+                mergePreviewMessage.textContent = 'Não foi possível carregar as bibliotecas de PDF. Verifique sua conexão com a internet.';
+                mergePreviewPromise = null;
+                return;
+            }
+
+            const files = [...selectedFiles];
+            mergePreviewMessage.hidden = false;
+            mergePreviewMessage.textContent = 'Preparando a pré-visualização do PDF unido...';
+            mergePreviewPromiseGeneration = generation;
+            mergePreviewPromise = createMergedPdfData(files)
+                .then(async (data) => {
+                    if (generation !== mergePreviewGeneration) return null;
+                    mergePreviewResult = data;
+                    mergePreviewResultGeneration = generation;
+                    await showMergedPreview(data, generation);
+                    return data;
+                })
+                .catch((error) => {
+                    if (generation === mergePreviewGeneration) {
+                        console.error(error);
+                        const details = error instanceof Error ? error.message : String(error);
+                        mergePreviewMessage.hidden = false;
+                        mergePreviewMessage.textContent = `Não foi possível pré-visualizar os PDFs. ${details}`;
+                    }
+                    return null;
+                });
+        }
+
+        function parsePageSelection(value, pageCount) {
+            const pages = [];
+            const entries = value.split(',');
+
+            for (const rawEntry of entries) {
+                const entry = rawEntry.trim();
+                const match = entry.match(/^(\d+)(?:\s*-\s*(\d+))?$/);
+                if (!match) {
+                    throw new Error('Informe páginas no formato indicado, por exemplo: 1, 3-5.');
+                }
+
+                const start = Number(match[1]);
+                const end = match[2] ? Number(match[2]) : start;
+                if (start < 1 || end < start || end > pageCount) {
+                    throw new Error(`As páginas devem estar entre 1 e ${pageCount}, e os intervalos precisam estar em ordem.`);
+                }
+
+                for (let page = start; page <= end; page += 1) {
+                    if (!pages.includes(page - 1)) pages.push(page - 1);
+                }
+            }
+
+            return pages;
+        }
+
+        function formatPageSelection(pages) {
+            const sortedPages = [...pages].sort((a, b) => a - b);
+            const ranges = [];
+            let start = sortedPages[0];
+            let end = start;
+
+            for (let index = 1; index <= sortedPages.length; index += 1) {
+                const page = sortedPages[index];
+                if (page === end + 1) {
+                    end = page;
+                    continue;
+                }
+
+                ranges.push(start === end ? String(start) : `${start}-${end}`);
+                start = page;
+                end = page;
+            }
+
+            return ranges.join(', ');
+        }
+
+        function updatePageSelection() {
+            pageSelectionInput.value = formatPageSelection(selectedPages);
+            selectionCount.textContent = selectedPages.size === 1
+                ? '1 página selecionada'
+                : `${selectedPages.size} páginas selecionadas`;
+            extractBtn.disabled = !extractFile || selectedPages.size === 0;
+            statusMsg.style.display = 'none';
+            statusMsg.innerText = '';
+
+            pagePreview.querySelectorAll('.page-card').forEach((card) => {
+                const isSelected = selectedPages.has(Number(card.dataset.page));
+                card.setAttribute('aria-pressed', String(isSelected));
+            });
+        }
+
+        function setSelectedPages(pages) {
+            selectedPages.clear();
+            pages.forEach((page) => selectedPages.add(page + 1));
+            updatePageSelection();
+        }
+
+        function togglePage(pageNumber, card) {
+            if (selectedPages.has(pageNumber)) {
+                selectedPages.delete(pageNumber);
+            } else {
+                selectedPages.add(pageNumber);
+            }
+            card.setAttribute('aria-pressed', String(selectedPages.has(pageNumber)));
+            updatePageSelection();
+        }
+
+        function renderPageThumbnail(pageNumber, canvas, loadId) {
+            if (!previewDocument || loadId !== previewLoadId) return;
+
+            previewDocument.getPage(pageNumber).then((page) => {
+                if (loadId !== previewLoadId) return;
+                const originalViewport = page.getViewport({ scale: 1 });
+                const scale = Math.min(1, 220 / originalViewport.width, 300 / originalViewport.height);
+                const viewport = page.getViewport({ scale });
+                canvas.width = Math.ceil(viewport.width);
+                canvas.height = Math.ceil(viewport.height);
+                return page.render({
+                    canvasContext: canvas.getContext('2d'),
+                    viewport
+                }).promise;
+            }).catch((error) => {
+                if (loadId === previewLoadId) {
+                    console.error(error);
+                    showStatus(`❌ Não foi possível pré-visualizar a página ${pageNumber}.`, '#dc2626');
+                }
+            });
+        }
+
+        function renderPageCards(loadId) {
+            pagePreview.innerHTML = '';
+            if (previewObserver) previewObserver.disconnect();
+
+            previewObserver = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (!entry.isIntersecting) return;
+                    const card = entry.target;
+                    previewObserver.unobserve(card);
+                    renderPageThumbnail(
+                        Number(card.dataset.page),
+                        card.querySelector('canvas'),
+                        loadId
+                    );
+                });
+            }, { root: pagePreview, rootMargin: '100px' });
+
+            for (let pageNumber = 1; pageNumber <= extractPageCount; pageNumber += 1) {
+                const card = document.createElement('button');
+                const canvas = document.createElement('canvas');
+                const label = document.createElement('span');
+                card.type = 'button';
+                card.className = 'page-card';
+                card.dataset.page = String(pageNumber);
+                card.setAttribute('aria-pressed', 'false');
+                card.setAttribute('aria-label', `Selecionar página ${pageNumber}`);
+                label.textContent = `Página ${pageNumber}`;
+                card.append(canvas, label);
+                card.addEventListener('click', () => togglePage(pageNumber, card));
+                pagePreview.appendChild(card);
+                previewObserver.observe(card);
+            }
+        }
+
+        function renderFiles() {
+            fileListContainer.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const item = document.createElement('div');
+                const label = document.createElement('span');
+                const fileNumber = document.createElement('strong');
+                const removeButton = document.createElement('button');
+                item.className = 'file-item merge-file-item';
+                item.draggable = true;
+                item.dataset.index = String(index);
+                item.setAttribute('aria-label', `PDF ${index + 1}: ${file.name}. Arraste para mudar a ordem.`);
+                fileNumber.textContent = `PDF ${index + 1}:`;
+                label.className = 'merge-file-name';
+                label.append(fileNumber, ` ${file.name}`);
+                removeButton.type = 'button';
+                removeButton.className = 'file-item-remove';
+                removeButton.textContent = 'Remover';
+                removeButton.setAttribute('aria-label', `Remover ${file.name}`);
+                removeButton.addEventListener('click', () => {
+                    selectedFiles.splice(index, 1);
+                    renderFiles();
+                });
+
+                item.addEventListener('dragstart', (event) => {
+                    event.dataTransfer.setData('text/plain', String(index));
+                    event.dataTransfer.effectAllowed = 'move';
+                    item.classList.add('is-dragging');
+                });
+                item.addEventListener('dragend', () => {
+                    item.classList.remove('is-dragging');
+                    fileListContainer.querySelectorAll('.drag-target').forEach((target) => {
+                        target.classList.remove('drag-target');
+                    });
+                });
+                item.addEventListener('dragover', (event) => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = 'move';
+                    item.classList.add('drag-target');
+                });
+                item.addEventListener('dragleave', () => item.classList.remove('drag-target'));
+                item.addEventListener('drop', (event) => {
+                    event.preventDefault();
+                    item.classList.remove('drag-target');
+                    const fromIndex = Number(event.dataTransfer.getData('text/plain'));
+                    const toIndex = index;
+                    if (!Number.isInteger(fromIndex) || fromIndex === toIndex) return;
+                    const [movedFile] = selectedFiles.splice(fromIndex, 1);
+                    selectedFiles.splice(toIndex, 0, movedFile);
+                    renderFiles();
+                });
+
+                item.append(label, removeButton);
+                fileListContainer.appendChild(item);
+            });
+
+            mergeBtn.disabled = selectedFiles.length < 2;
+            updateMergedPreview();
+        }
+
+        mergeBtn.addEventListener('click', async () => {
+            if (selectedFiles.length < 2) return;
+            const filesToMerge = [...selectedFiles];
+
+            const outputName = getSafeOutputName(outputNameInput);
+
+            if (!outputName) {
+                showStatus('Digite um nome válido para o arquivo PDF.', '#dc2626');
+                outputNameInput.focus();
+                return;
+            }
+
+            try {
+                mergeBtn.disabled = true;
+                showStatus('⏳ Iniciando processamento...');
+
+                if (!window.PDFLib) {
+                    throw new Error('Não foi possível carregar a biblioteca de PDFs. Verifique sua conexão com a internet e abra esta página novamente.');
+                }
+
+                showStatus('⏳ Gerando novo PDF combinado...');
+                let mergedData = null;
+                if (mergePreviewResultGeneration === mergePreviewGeneration) {
+                    mergedData = mergePreviewResult;
+                } else if (mergePreviewPromiseGeneration === mergePreviewGeneration && mergePreviewPromise) {
+                    mergedData = await mergePreviewPromise;
+                }
+
+                if (!mergedData) {
+                    mergedData = await createMergedPdfData(filesToMerge, (index, file) => {
+                        showStatus(`⏳ Lendo o PDF ${index + 1} de ${filesToMerge.length}: ${file.name}`);
+                    });
+                }
+
+                downloadPdf(mergedData.bytes, outputName);
+                if (mergePreviewResult === mergedData) {
+                    mergePreviewResult = null;
+                    mergePreviewResultGeneration = -1;
+                }
+
+                showStatus('✅ Sucesso! O arquivo novo foi baixado.', '#16a34a');
+            } catch (error) {
+                console.error(error);
+                const details = error instanceof Error ? error.message : String(error);
+                showStatus(
+                    '❌ Erro ao processar os PDFs.\nDetalhe: ' + details + '\n\nCertifique-se de que os arquivos não estão protegidos por senha.',
+                    '#dc2626'
+                );
+            } finally {
+                mergeBtn.disabled = selectedFiles.length < 2;
+            }
+        });
+
+        extractInput.addEventListener('change', async () => {
+            const file = extractInput.files[0];
+            const loadId = ++previewLoadId;
+            if (previewObserver) previewObserver.disconnect();
+            if (previewLoadingTask) {
+                previewLoadingTask.destroy().catch((error) => {
+                    console.error('Não foi possível encerrar a pré-visualização anterior do PDF.', error);
+                });
+            }
+            previewDocument = null;
+            previewLoadingTask = null;
+            extractFile = null;
+            extractPageCount = 0;
+            selectedPages.clear();
+            extractBtn.disabled = true;
+            selectAllPagesButton.disabled = true;
+            clearPagesButton.disabled = true;
+            extractFileList.innerHTML = '';
+            pagePreview.innerHTML = '';
+            pageSelectionInput.value = '';
+            selectionCount.textContent = 'Nenhuma página selecionada';
+            statusMsg.style.display = 'none';
+            statusMsg.innerText = '';
+
+            if (!file) return;
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                showStatus('O arquivo selecionado precisa estar no formato PDF.', '#dc2626');
+                extractInput.value = '';
+                return;
+            }
+
+            try {
+                if (!window.PDFLib || !window.pdfjsLib) {
+                    throw new Error('Não foi possível carregar as bibliotecas de PDF. Verifique sua conexão com a internet e abra esta página novamente.');
+                }
+                previewLoadingTask = pdfjsLib.getDocument({
+                    data: new Uint8Array(await file.arrayBuffer())
+                });
+                const pdf = await previewLoadingTask.promise;
+                if (loadId !== previewLoadId) return;
+                previewDocument = pdf;
+                extractFile = file;
+                extractPageCount = pdf.numPages;
+
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.textContent = `${file.name} — ${extractPageCount} página(s)`;
+                extractFileList.appendChild(item);
+                selectAllPagesButton.disabled = false;
+                clearPagesButton.disabled = false;
+                renderPageCards(loadId);
+            } catch (error) {
+                if (loadId !== previewLoadId) return;
+                console.error(error);
+                const details = error instanceof Error ? error.message : String(error);
+                showStatus(`❌ Não foi possível abrir ou pré-visualizar o PDF.\nDetalhe: ${details}`, '#dc2626');
+                extractInput.value = '';
+            }
+        });
+
+        selectAllPagesButton.addEventListener('click', () => {
+            setSelectedPages(Array.from({ length: extractPageCount }, (_, index) => index));
+        });
+
+        clearPagesButton.addEventListener('click', () => setSelectedPages([]));
+
+        pageSelectionInput.addEventListener('change', () => {
+            if (!pageSelectionInput.value.trim()) {
+                setSelectedPages([]);
+                return;
+            }
+
+            try {
+                setSelectedPages(parsePageSelection(pageSelectionInput.value, extractPageCount));
+            } catch {
+                showStatus('Confira a numeração das páginas. Você também pode selecionar as páginas clicando nas pré-visualizações.', '#dc2626');
+            }
+        });
+
+        extractBtn.addEventListener('click', async () => {
+            if (!extractFile || !extractPageCount) return;
+
+            let pages;
+            try {
+                pages = parsePageSelection(pageSelectionInput.value, extractPageCount);
+            } catch (error) {
+                showStatus(`❌ ${error.message}`, '#dc2626');
+                pageSelectionInput.focus();
+                return;
+            }
+
+            const outputName = getSafeOutputName(extractOutputNameInput);
+            if (!outputName) {
+                showStatus('Digite um nome válido para o arquivo PDF.', '#dc2626');
+                extractOutputNameInput.focus();
+                return;
+            }
+
+            try {
+                extractBtn.disabled = true;
+                showStatus('⏳ Extraindo páginas selecionadas...');
+
+                const sourcePdf = await PDFLib.PDFDocument.load(await extractFile.arrayBuffer());
+                const extractedPdf = await PDFLib.PDFDocument.create();
+                const copiedPages = await extractedPdf.copyPages(sourcePdf, pages);
+                copiedPages.forEach((page) => extractedPdf.addPage(page));
+
+                downloadPdf(await extractedPdf.save(), outputName);
+                showStatus(`✅ Sucesso! O arquivo ${outputName}.pdf foi baixado.`, '#16a34a');
+            } catch (error) {
+                console.error(error);
+                const details = error instanceof Error ? error.message : String(error);
+                showStatus(
+                    `❌ Erro ao extrair as páginas.\nDetalhe: ${details}\n\nCertifique-se de que o arquivo não está protegido por senha.`,
+                    '#dc2626'
+                );
+            } finally {
+                extractBtn.disabled = !extractFile || selectedPages.size === 0;
+            }
+        });
+    </script>
+</body>
+</html>
