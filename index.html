@@ -6,10 +6,16 @@
     <title>Juntar PDFs em um só</title>
     <link rel="icon" type="image/png" href="img/Logo%20moderno%20de%20editor%20de%20PDF.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" type="text/css" href="Padrao.css">
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+    <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+    <script>window.docxGenerator = window.docx;</script>
+    <script src="https://unpkg.com/docx-preview@0.3.6/dist/docx-preview.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -19,90 +25,292 @@
                 <img class="app-logo" src="img/Logo%20moderno%20de%20editor%20de%20PDF.png" alt="Logo do editor de PDF">
                 <div>
                     <h1>Ferramentas de PDF</h1>
-                    <p>Junte vários PDFs, organize páginas ou extraia páginas para criar um novo arquivo.</p>
+                    <p>Junte PDFs, extraia páginas, aplique OCR ou converta documentos e imagens.</p>
                 </div>
             </div>
             <button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false">
-                <span id="theme-icon" aria-hidden="true">🌙</span>
-                <span id="theme-label">Modo escuro</span>
+                <i class="bi bi-moon-fill" id="theme-icon" aria-hidden="true"></i>
             </button>
         </header>
 
-        <div class="tabs" role="tablist" aria-label="Ferramentas de PDF">
-            <button class="tab" id="merge-tab" type="button" role="tab" aria-selected="true" aria-controls="merge-panel">Juntar PDFs</button>
-            <button class="tab" id="extract-tab" type="button" role="tab" aria-selected="false" aria-controls="extract-panel">Extrair páginas</button>
-        </div>
+        <div class="editor-layout">
+            <nav class="tabs" id="tool-tabs" role="tablist" aria-label="Ferramentas de PDF">
+                <button class="tab" id="merge-tab" type="button" role="tab" aria-selected="true" aria-controls="merge-panel">
+                    <i class="bi bi-files" aria-hidden="true"></i>
+                    <span>Juntar PDFs</span>
+                </button>
+                <button class="tab" id="extract-tab" type="button" role="tab" aria-selected="false" aria-controls="extract-panel">
+                    <i class="bi bi-file-earmark-break" aria-hidden="true"></i>
+                    <span>Extrair páginas</span>
+                </button>
+                <button class="tab" id="word-tab" type="button" role="tab" aria-selected="false" aria-controls="word-panel">
+                    <i class="bi bi-file-earmark-word" aria-hidden="true"></i>
+                    <span>PDF para Word</span>
+                </button>
+                <button class="tab" id="word-pdf-tab" type="button" role="tab" aria-selected="false" aria-controls="word-pdf-panel">
+                    <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+                    <span>Word para PDF</span>
+                </button>
+                <button class="tab" id="jpg-tab" type="button" role="tab" aria-selected="false" aria-controls="jpg-panel">
+                    <i class="bi bi-file-earmark-image" aria-hidden="true"></i>
+                    <span>PDF para JPG</span>
+                </button>
+                <button class="tab" id="images-pdf-tab" type="button" role="tab" aria-selected="false" aria-controls="images-pdf-panel">
+                    <i class="bi bi-images" aria-hidden="true"></i>
+                    <span>JPG para PDF</span>
+                </button>
+                <button class="tab" id="ocr-tab" type="button" role="tab" aria-selected="false" aria-controls="ocr-panel">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <span>OCR de PDF</span>
+                </button>
+                <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-label="Abrir opções de ferramentas" aria-expanded="false" aria-controls="tool-tabs">
+                    <i class="bi bi-list" aria-hidden="true"></i>
+                </button>
+            </nav>
 
-        <section id="merge-panel" role="tabpanel" aria-labelledby="merge-tab">
-            <div class="dropzone" onclick="document.getElementById('pdf-inputs').click()">
-                <span style="font-size: 36px;">📄</span>
-                <p style="margin: 10px 0 0 0; font-weight: 500;">Clique ou arraste arquivos PDF para adicioná-los</p>
-                <input type="file" id="pdf-inputs" accept=".pdf" multiple>
-            </div>
-
-            <p id="merge-order-help">Adicione dois ou mais PDFs. Arraste os arquivos para ordenar documentos e arraste as miniaturas (ou use as setas) para ordenar páginas.</p>
-            <div class="file-list" id="file-list" aria-describedby="merge-order-help"></div>
-
-            <section class="preview-section" aria-labelledby="merge-preview-title">
-                <div class="preview-heading">
-                    <h2 id="merge-preview-title">Pré-visualização do PDF unido</h2>
-                    <span id="merge-preview-count" aria-live="polite"></span>
+            <section id="merge-panel" class="editor-panel" role="tabpanel" aria-labelledby="merge-tab">
+                <div class="editor-preview-column">
+                    <div class="dropzone editor-center-upload" id="merge-center-dropzone">
+                        <button class="center-upload-button" id="merge-center-upload" type="button">
+                            <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
+                            <span>Arraste arquivos PDF para cá ou clique para anexar</span>
+                        </button>
+                        <input type="file" id="pdf-inputs" accept=".pdf" multiple>
+                    </div>
+                    <section class="preview-section" aria-labelledby="merge-preview-title">
+                        <div class="preview-heading">
+                            <h2 id="merge-preview-title">Pré-visualização do PDF unido</h2>
+                            <span id="merge-preview-count" aria-live="polite"></span>
+                        </div>
+                        <div id="merge-preview-message" class="preview-message">Adicione pelo menos dois PDFs para ver e organizar as páginas na ordem final.</div>
+                        <div id="merge-preview-grid" class="merge-preview-grid" aria-label="Páginas do PDF unido" hidden></div>
+                    </section>
                 </div>
-                <div id="merge-preview-message" class="preview-message">Adicione pelo menos dois PDFs para ver e organizar as páginas na ordem final.</div>
-                <div id="merge-preview-grid" class="merge-preview-grid" aria-label="Páginas do PDF unido" hidden></div>
+
+                <aside class="editor-options" aria-label="Opções para juntar PDFs">
+                    <h2 class="options-title"><i class="bi bi-sliders" aria-hidden="true"></i> Opções do documento</h2>
+                    <p id="merge-order-help" class="option-help">Adicione dois ou mais PDFs. Arraste para ordenar os documentos; use as miniaturas ou setas para organizar as páginas.</p>
+                    <div class="file-list" id="file-list" aria-describedby="merge-order-help"></div>
+
+                    <label class="filename-field" for="output-name">
+                        Nome do arquivo combinado
+                        <input class="form-control" type="text" id="output-name" value="documento_combinado" maxlength="100" placeholder="Digite o nome do PDF">
+                    </label>
+
+                    <button class="btn btn-primary" id="merge-btn" disabled>Mesclar e Baixar PDF Novo</button>
+                </aside>
             </section>
 
-            <label class="filename-field" for="output-name">
-                Nome do arquivo combinado
-                <input class="form-control" type="text" id="output-name" value="documento_combinado" maxlength="100" placeholder="Digite o nome do PDF">
-            </label>
-
-            <button class="btn btn-primary" id="merge-btn" disabled>Mesclar e Baixar PDF Novo</button>
-        </section>
-
-        <section id="extract-panel" role="tabpanel" aria-labelledby="extract-tab" hidden>
-            <div class="dropzone" onclick="document.getElementById('extract-input').click()">
-                <span style="font-size: 36px;">📄</span>
-                <p style="margin: 10px 0 0 0; font-weight: 500;">Clique ou arraste um arquivo PDF para esta área</p>
-                <input type="file" id="extract-input" accept=".pdf">
-            </div>
-            <label class="extract-mode-toggle form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="split-mode" disabled>
-                <span class="form-check-label">Dividir em vários PDFs (baixar em ZIP)</span>
-            </label>
-            <p id="extract-help">Sem divisão, as páginas selecionadas serão baixadas em um único PDF.</p>
-            <div id="split-controls" hidden>
-                <div class="split-toolbar">
-                    <span>Selecione as páginas de cada PDF:</span>
-                    <div class="page-preview-actions">
-                        <button class="btn btn-outline-secondary btn-sm" id="add-split-part" type="button" disabled>Adicionar PDF</button>
-                        <button class="btn btn-outline-secondary btn-sm" id="remove-split-part" type="button" disabled>Remover atual</button>
+            <section id="extract-panel" class="editor-panel" role="tabpanel" aria-labelledby="extract-tab" hidden>
+                <div class="editor-preview-column">
+                    <div class="dropzone editor-center-upload" id="extract-center-dropzone">
+                        <button class="center-upload-button" id="extract-center-upload" type="button">
+                            <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
+                            <span>Arraste um PDF para cá ou clique para anexar</span>
+                        </button>
+                        <input type="file" id="extract-input" accept=".pdf">
                     </div>
+                    <div class="page-preview-toolbar">
+                        <span id="selection-count" aria-live="polite">Nenhuma página selecionada</span>
+                        <div class="page-preview-actions">
+                            <button class="btn btn-outline-secondary btn-sm" id="select-all-pages" type="button" disabled>Selecionar todas</button>
+                            <button class="btn btn-outline-secondary btn-sm" id="clear-pages" type="button" disabled>Limpar</button>
+                        </div>
+                    </div>
+                    <div class="page-preview" id="page-preview" aria-label="Pré-visualização das páginas do PDF"></div>
                 </div>
-                <div class="file-list extract-document-list" id="extract-file-list" aria-label="PDFs fracionados"></div>
-            </div>
-            <div class="page-preview-toolbar">
-                <span id="selection-count" aria-live="polite">Nenhuma página selecionada</span>
-                <div class="page-preview-actions">
-                    <button class="btn btn-outline-secondary btn-sm" id="select-all-pages" type="button" disabled>Selecionar todas</button>
-                    <button class="btn btn-outline-secondary btn-sm" id="clear-pages" type="button" disabled>Limpar</button>
+
+                <aside class="editor-options" aria-label="Opções para extrair páginas">
+                    <h2 class="options-title"><i class="bi bi-sliders" aria-hidden="true"></i> Opções do documento</h2>
+                    <label class="extract-mode-toggle form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="split-mode" disabled>
+                        <span class="form-check-label">Dividir em vários PDFs (baixar em ZIP)</span>
+                    </label>
+                    <p id="extract-help" class="option-help">Sem divisão, as páginas selecionadas serão baixadas em um único PDF.</p>
+                    <div id="split-controls" hidden>
+                        <div class="split-toolbar">
+                            <span>Selecione as páginas de cada PDF:</span>
+                            <div class="page-preview-actions">
+                                <button class="btn btn-outline-secondary btn-sm" id="add-split-part" type="button" disabled>Adicionar PDF</button>
+                                <button class="btn btn-outline-secondary btn-sm" id="remove-split-part" type="button" disabled>Remover atual</button>
+                            </div>
+                        </div>
+                        <div class="file-list extract-document-list" id="extract-file-list" aria-label="PDFs fracionados"></div>
+                    </div>
+
+                    <label class="filename-field" for="page-selection">
+                        Páginas para extrair
+                        <input class="form-control" type="text" id="page-selection" placeholder="Ex.: 1, 3-5" aria-describedby="page-selection-help">
+                    </label>
+                    <p id="page-selection-help" class="option-help">Informe números separados por vírgula e use hífen para intervalos, por exemplo: 1, 3-5.</p>
+
+                    <label class="filename-field" for="extract-output-name">
+                        <span id="extract-output-label">Nome do novo arquivo PDF</span>
+                        <input class="form-control" type="text" id="extract-output-name" value="paginas_extraidas" maxlength="100" placeholder="Digite o nome do arquivo">
+                    </label>
+
+                    <button class="btn btn-primary" id="extract-btn" disabled>Extrair e Baixar PDF</button>
+                </aside>
+            </section>
+
+            <section id="word-panel" class="editor-panel" role="tabpanel" aria-labelledby="word-tab" hidden>
+                <div class="editor-preview-column">
+                    <div class="dropzone editor-center-upload" id="word-center-dropzone">
+                        <button class="center-upload-button" id="word-center-upload" type="button">
+                            <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
+                            <span>Anexe ou arraste um PDF para converter</span>
+                        </button>
+                        <input type="file" id="word-input" accept=".pdf,application/pdf">
+                    </div>
+                    <section class="preview-section word-preview-section" aria-labelledby="word-preview-title">
+                        <div class="preview-heading">
+                            <h2 id="word-preview-title">Pré-visualização do texto</h2>
+                            <span id="word-preview-pages" aria-live="polite"></span>
+                        </div>
+                        <div id="word-preview-message" class="preview-message">O texto extraído do PDF aparecerá aqui.</div>
+                        <pre id="word-preview-text" class="word-preview-text" hidden></pre>
+                    </section>
                 </div>
-            </div>
-            <div class="page-preview" id="page-preview" aria-label="Pré-visualização das páginas do PDF"></div>
 
-            <label class="filename-field" for="page-selection">
-                Páginas para extrair
-                <input class="form-control" type="text" id="page-selection" placeholder="Ex.: 1, 3-5" aria-describedby="page-selection-help">
-            </label>
-            <p id="page-selection-help">Informe números de páginas separados por vírgula. Use hífen para intervalos, por exemplo: 1, 3-5.</p>
+                <aside class="editor-options" aria-label="Opções de conversão para Word">
+                    <h2 class="options-title"><i class="bi bi-file-earmark-word" aria-hidden="true"></i> Converter para Word</h2>
+                    <p class="option-help">Gera um DOCX com texto editável, dimensões de página, posições e tamanhos tipográficos aproximados. Cores, imagens, tabelas, colunas e fontes incorporadas podem não ser preservadas exatamente.</p>
+                    <label class="filename-field" for="word-output-name">
+                        Nome do arquivo Word
+                        <input class="form-control" type="text" id="word-output-name" value="documento_convertido" maxlength="100" placeholder="Digite o nome do arquivo">
+                    </label>
+                    <button class="btn btn-primary" id="word-convert-btn" type="button" disabled>Converter e Baixar DOCX</button>
+                </aside>
+            </section>
 
-            <label class="filename-field" for="extract-output-name">
-                <span id="extract-output-label">Nome do novo arquivo PDF</span>
-                <input class="form-control" type="text" id="extract-output-name" value="paginas_extraidas" maxlength="100" placeholder="Digite o nome do arquivo">
-            </label>
+            <section id="word-pdf-panel" class="editor-panel" role="tabpanel" aria-labelledby="word-pdf-tab" hidden>
+                <div class="editor-preview-column">
+                    <div class="dropzone editor-center-upload" id="word-pdf-dropzone">
+                        <button class="center-upload-button" id="word-pdf-upload" type="button">
+                            <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
+                            <span>Anexe ou arraste um arquivo Word (.docx)</span>
+                        </button>
+                        <input type="file" id="word-pdf-input" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                    </div>
+                    <section class="preview-section word-pdf-preview-section" aria-labelledby="word-pdf-preview-title">
+                        <div class="preview-heading">
+                            <h2 id="word-pdf-preview-title">Pré-visualização do documento</h2>
+                        </div>
+                        <div id="word-pdf-message" class="preview-message">A pré-visualização do arquivo Word aparecerá aqui.</div>
+                        <div id="word-pdf-content" class="word-pdf-content" hidden></div>
+                    </section>
+                </div>
 
-            <button class="btn btn-primary" id="extract-btn" disabled>Extrair e Baixar PDF</button>
-        </section>
+                <aside class="editor-options" aria-label="Opções de conversão de Word para PDF">
+                    <h2 class="options-title"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> Converter para PDF</h2>
+                    <p class="option-help">Converta arquivos DOCX para PDF diretamente no navegador. Arquivos Word antigos no formato .doc não são aceitos.</p>
+                    <label class="filename-field" for="word-pdf-output-name">
+                        Nome do arquivo PDF
+                        <input class="form-control" type="text" id="word-pdf-output-name" value="documento_convertido" maxlength="100" placeholder="Digite o nome do arquivo">
+                    </label>
+                    <button class="btn btn-primary" id="word-pdf-convert-btn" type="button" disabled>Converter e Baixar PDF</button>
+                </aside>
+            </section>
+
+            <section id="jpg-panel" class="editor-panel" role="tabpanel" aria-labelledby="jpg-tab" hidden>
+                <div class="editor-preview-column">
+                    <div class="dropzone editor-center-upload" id="jpg-center-dropzone">
+                        <button class="center-upload-button" id="jpg-center-upload" type="button">
+                            <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
+                            <span>Anexe ou arraste um PDF para converter</span>
+                        </button>
+                        <input type="file" id="jpg-input" accept=".pdf,application/pdf">
+                    </div>
+                    <section class="preview-section" aria-labelledby="jpg-preview-title">
+                        <div class="preview-heading">
+                            <h2 id="jpg-preview-title">Pré-visualização das páginas</h2>
+                            <span id="jpg-preview-count" aria-live="polite"></span>
+                        </div>
+                        <div id="jpg-preview-message" class="preview-message">As páginas do PDF aparecerão aqui como imagens.</div>
+                        <div id="jpg-preview-grid" class="jpg-preview-grid" aria-label="Pré-visualização das páginas convertidas" hidden></div>
+                    </section>
+                </div>
+
+                <aside class="editor-options" aria-label="Opções de conversão para JPG">
+                    <h2 class="options-title"><i class="bi bi-file-earmark-image" aria-hidden="true"></i> Converter para JPG</h2>
+                    <p class="option-help">Cada página será convertida para JPG na maior qualidade disponível e baixada junto das demais em um arquivo ZIP.</p>
+                    <label class="filename-field" for="jpg-output-name">
+                        Nome do arquivo ZIP
+                        <input class="form-control" type="text" id="jpg-output-name" value="paginas_convertidas" maxlength="100" placeholder="Digite o nome do arquivo">
+                    </label>
+                    <button class="btn btn-primary" id="jpg-convert-btn" type="button" disabled>Converter e Baixar JPGs</button>
+                </aside>
+            </section>
+
+            <section id="images-pdf-panel" class="editor-panel" role="tabpanel" aria-labelledby="images-pdf-tab" hidden>
+                <div class="editor-preview-column">
+                    <div class="dropzone editor-center-upload" id="images-pdf-dropzone">
+                        <button class="center-upload-button" id="images-pdf-upload" type="button">
+                            <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
+                            <span>Anexe ou arraste imagens JPG</span>
+                        </button>
+                        <input type="file" id="images-pdf-input" accept=".jpg,.jpeg,image/jpeg" multiple>
+                    </div>
+                    <section class="preview-section" aria-labelledby="images-pdf-preview-title">
+                        <div class="preview-heading">
+                            <h2 id="images-pdf-preview-title">Imagens no PDF</h2>
+                            <span id="images-pdf-count" aria-live="polite"></span>
+                        </div>
+                        <div id="images-pdf-message" class="preview-message">Adicione uma ou mais imagens JPG. Arraste as miniaturas para definir a ordem das páginas.</div>
+                        <div id="images-pdf-grid" class="images-pdf-grid" aria-label="Imagens que serão convertidas em páginas" hidden></div>
+                    </section>
+                </div>
+
+                <aside class="editor-options" aria-label="Opções de conversão de JPG para PDF">
+                    <h2 class="options-title"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> Criar PDF</h2>
+                    <p class="option-help">Cada imagem será colocada em uma página, na ordem exibida. A proporção original será mantida.</p>
+                    <label class="filename-field" for="images-pdf-output-name">
+                        Nome do arquivo PDF
+                        <input class="form-control" type="text" id="images-pdf-output-name" value="imagens_convertidas" maxlength="100" placeholder="Digite o nome do arquivo">
+                    </label>
+                    <button class="btn btn-primary" id="images-pdf-convert-btn" type="button" disabled>Criar e Baixar PDF</button>
+                </aside>
+            </section>
+
+            <section id="ocr-panel" class="editor-panel" role="tabpanel" aria-labelledby="ocr-tab" hidden>
+                <div class="editor-preview-column">
+                    <div class="dropzone editor-center-upload" id="ocr-dropzone">
+                        <button class="center-upload-button" id="ocr-upload" type="button">
+                            <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
+                            <span>Anexe ou arraste um PDF para aplicar OCR</span>
+                        </button>
+                        <input type="file" id="ocr-input" accept=".pdf,application/pdf">
+                    </div>
+                    <section class="preview-section" aria-labelledby="ocr-preview-title">
+                        <div class="preview-heading">
+                            <h2 id="ocr-preview-title">Pré-visualização das páginas</h2>
+                            <span id="ocr-preview-count" aria-live="polite"></span>
+                        </div>
+                        <div id="ocr-preview-message" class="preview-message">Adicione um PDF digitalizado para reconhecer o texto e torná-lo pesquisável.</div>
+                        <div id="ocr-preview-grid" class="jpg-preview-grid" aria-label="Páginas do PDF selecionado" hidden></div>
+                    </section>
+                </div>
+
+                <aside class="editor-options" aria-label="Opções de OCR para PDF">
+                    <h2 class="options-title"><i class="bi bi-search" aria-hidden="true"></i> Tornar PDF pesquisável</h2>
+                    <p class="option-help">Reconhece o texto das páginas e cria um PDF com uma camada de texto pesquisável. O processamento ocorre neste navegador; a primeira utilização baixa os dados de OCR pela internet.</p>
+                    <label class="filename-field" for="ocr-language">
+                        Idioma do documento
+                        <select class="form-select" id="ocr-language">
+                            <option value="por" selected>Português</option>
+                            <option value="eng">Inglês</option>
+                            <option value="spa">Espanhol</option>
+                            <option value="por+eng">Português e inglês</option>
+                        </select>
+                    </label>
+                    <label class="filename-field" for="ocr-output-name">
+                        Nome do novo arquivo PDF
+                        <input class="form-control" type="text" id="ocr-output-name" value="documento_ocr" maxlength="100" placeholder="Digite o nome do arquivo">
+                    </label>
+                    <button class="btn btn-primary" id="ocr-convert-btn" type="button" disabled>Aplicar OCR e Baixar PDF</button>
+                </aside>
+            </section>
+        </div>
 
         <div class="status" id="status-msg"></div>
     </div>

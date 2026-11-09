@@ -27,7 +27,60 @@ const mergePreviewMessage = document.getElementById('merge-preview-message');
 const mergePreviewCount = document.getElementById('merge-preview-count');
 const themeToggle = document.getElementById('theme-toggle');
 const themeIcon = document.getElementById('theme-icon');
-const themeLabel = document.getElementById('theme-label');
+const mergeCenterUpload = document.getElementById('merge-center-upload');
+const extractCenterUpload = document.getElementById('extract-center-upload');
+const wordTab = document.getElementById('word-tab');
+const wordPanel = document.getElementById('word-panel');
+const wordInput = document.getElementById('word-input');
+const wordCenterDropzone = document.getElementById('word-center-dropzone');
+const wordCenterUpload = document.getElementById('word-center-upload');
+const wordConvertButton = document.getElementById('word-convert-btn');
+const wordOutputNameInput = document.getElementById('word-output-name');
+const wordPreviewMessage = document.getElementById('word-preview-message');
+const wordPreviewText = document.getElementById('word-preview-text');
+const wordPreviewPages = document.getElementById('word-preview-pages');
+const jpgTab = document.getElementById('jpg-tab');
+const jpgPanel = document.getElementById('jpg-panel');
+const wordPdfTab = document.getElementById('word-pdf-tab');
+const wordPdfPanel = document.getElementById('word-pdf-panel');
+const wordPdfInput = document.getElementById('word-pdf-input');
+const wordPdfDropzone = document.getElementById('word-pdf-dropzone');
+const wordPdfUpload = document.getElementById('word-pdf-upload');
+const wordPdfMessage = document.getElementById('word-pdf-message');
+const wordPdfContent = document.getElementById('word-pdf-content');
+const wordPdfOutputNameInput = document.getElementById('word-pdf-output-name');
+const wordPdfConvertButton = document.getElementById('word-pdf-convert-btn');
+const jpgInput = document.getElementById('jpg-input');
+const jpgCenterDropzone = document.getElementById('jpg-center-dropzone');
+const jpgCenterUpload = document.getElementById('jpg-center-upload');
+const jpgPreviewMessage = document.getElementById('jpg-preview-message');
+const jpgPreviewGrid = document.getElementById('jpg-preview-grid');
+const jpgPreviewCount = document.getElementById('jpg-preview-count');
+const jpgOutputNameInput = document.getElementById('jpg-output-name');
+const jpgConvertButton = document.getElementById('jpg-convert-btn');
+const imagesPdfTab = document.getElementById('images-pdf-tab');
+const imagesPdfPanel = document.getElementById('images-pdf-panel');
+const imagesPdfInput = document.getElementById('images-pdf-input');
+const imagesPdfDropzone = document.getElementById('images-pdf-dropzone');
+const imagesPdfUpload = document.getElementById('images-pdf-upload');
+const imagesPdfMessage = document.getElementById('images-pdf-message');
+const imagesPdfGrid = document.getElementById('images-pdf-grid');
+const imagesPdfCount = document.getElementById('images-pdf-count');
+const imagesPdfOutputNameInput = document.getElementById('images-pdf-output-name');
+const imagesPdfConvertButton = document.getElementById('images-pdf-convert-btn');
+const ocrTab = document.getElementById('ocr-tab');
+const ocrPanel = document.getElementById('ocr-panel');
+const ocrInput = document.getElementById('ocr-input');
+const ocrDropzone = document.getElementById('ocr-dropzone');
+const ocrUpload = document.getElementById('ocr-upload');
+const ocrPreviewMessage = document.getElementById('ocr-preview-message');
+const ocrPreviewGrid = document.getElementById('ocr-preview-grid');
+const ocrPreviewCount = document.getElementById('ocr-preview-count');
+const ocrLanguageInput = document.getElementById('ocr-language');
+const ocrOutputNameInput = document.getElementById('ocr-output-name');
+const ocrConvertButton = document.getElementById('ocr-convert-btn');
+const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+const toolTabs = document.getElementById('tool-tabs');
 
 let selectedFiles = [];
 let mergePreviewGeneration = 0;
@@ -49,13 +102,24 @@ let previewLoadingTask = null;
 let previewObserver = null;
 let previewLoadId = 0;
 let selectedPages = new Set();
+let wordExtractedPages = [];
+let wordLoadId = 0;
+let wordPdfHtml = '';
+let wordPdfLoadId = 0;
+let jpgPdfDocument = null;
+let jpgLoadId = 0;
+let imageFiles = [];
+let imagePreviewUrls = [];
+let ocrPdfDocument = null;
+let ocrFile = null;
+let ocrLoadId = 0;
+let ocrProcessing = false;
 
 function applyTheme(theme) {
     const isDark = theme === 'dark';
     document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
     themeToggle.setAttribute('aria-pressed', String(isDark));
-    themeIcon.textContent = isDark ? '☀️' : '🌙';
-    themeLabel.textContent = isDark ? 'Modo claro' : 'Modo escuro';
+    themeIcon.className = `bi ${isDark ? 'bi-sun-fill' : 'bi-moon-fill'}`;
     themeToggle.setAttribute('aria-label', isDark ? 'Ativar modo claro' : 'Ativar modo escuro');
 }
 
@@ -82,17 +146,74 @@ if (window.pdfjsLib) {
 }
 
 function setActiveTab(tab) {
-    const showMerge = tab === 'merge';
-    mergeTab.setAttribute('aria-selected', String(showMerge));
-    extractTab.setAttribute('aria-selected', String(!showMerge));
-    mergePanel.hidden = !showMerge;
-    extractPanel.hidden = showMerge;
+    const activeTab = tab === 'merge' ? mergeTab
+        : tab === 'extract' ? extractTab
+            : tab === 'word' ? wordTab
+                : tab === 'word-pdf' ? wordPdfTab
+                    : tab === 'jpg' ? jpgTab
+                        : tab === 'ocr' ? ocrTab : imagesPdfTab;
+    const panels = [
+        [mergeTab, mergePanel],
+        [extractTab, extractPanel],
+        [wordTab, wordPanel],
+        [wordPdfTab, wordPdfPanel],
+        [jpgTab, jpgPanel],
+        [imagesPdfTab, imagesPdfPanel],
+        [ocrTab, ocrPanel]
+    ];
+    panels.forEach(([tabButton, panel]) => {
+        const isActive = tabButton === activeTab;
+        tabButton.setAttribute('aria-selected', String(isActive));
+        panel.hidden = !isActive;
+    });
+    toolTabs.dataset.open = 'false';
+    mobileMenuToggle.setAttribute('aria-expanded', 'false');
+    mobileMenuToggle.setAttribute('aria-label', 'Abrir opções de ferramentas');
     statusMsg.style.display = 'none';
     statusMsg.innerText = '';
 }
 
+function updateResponsiveToolMenu() {
+    const tabs = Array.from(toolTabs.querySelectorAll('[role="tab"]'));
+    const isMobile = window.matchMedia('(max-width: 600px)').matches;
+    const isMedium = window.matchMedia('(min-width: 601px) and (max-width: 960px)').matches;
+    const hasMediumOverflow = isMedium && tabs.length > 1;
+
+    mobileMenuToggle.hidden = !isMobile && !hasMediumOverflow;
+    toolTabs.dataset.mediumOverflow = String(hasMediumOverflow);
+    if (!isMobile && !hasMediumOverflow) {
+        toolTabs.dataset.open = 'false';
+        mobileMenuToggle.setAttribute('aria-expanded', 'false');
+        mobileMenuToggle.setAttribute('aria-label', 'Abrir opções de ferramentas');
+    }
+}
+
+updateResponsiveToolMenu();
+window.addEventListener('resize', updateResponsiveToolMenu);
+
 mergeTab.addEventListener('click', () => setActiveTab('merge'));
 extractTab.addEventListener('click', () => setActiveTab('extract'));
+wordTab.addEventListener('click', () => setActiveTab('word'));
+wordPdfTab.addEventListener('click', () => setActiveTab('word-pdf'));
+jpgTab.addEventListener('click', () => setActiveTab('jpg'));
+imagesPdfTab.addEventListener('click', () => setActiveTab('images-pdf'));
+ocrTab.addEventListener('click', () => setActiveTab('ocr'));
+mobileMenuToggle.addEventListener('click', () => {
+    const isOpen = toolTabs.dataset.open !== 'true';
+    toolTabs.dataset.open = String(isOpen);
+    mobileMenuToggle.setAttribute('aria-expanded', String(isOpen));
+    mobileMenuToggle.setAttribute(
+        'aria-label',
+        isOpen ? 'Fechar opções de ferramentas' : 'Abrir opções de ferramentas'
+    );
+});
+mergeCenterUpload.addEventListener('click', () => fileInput.click());
+extractCenterUpload.addEventListener('click', () => extractInput.click());
+wordCenterUpload.addEventListener('click', () => wordInput.click());
+wordPdfUpload.addEventListener('click', () => wordPdfInput.click());
+jpgCenterUpload.addEventListener('click', () => jpgInput.click());
+imagesPdfUpload.addEventListener('click', () => imagesPdfInput.click());
+ocrUpload.addEventListener('click', () => ocrInput.click());
 
 function enableFileDrop(dropzone, input) {
     let dragDepth = 0;
@@ -129,8 +250,13 @@ function enableFileDrop(dropzone, input) {
     });
 }
 
-enableFileDrop(document.querySelector('#merge-panel .dropzone'), fileInput);
-enableFileDrop(document.querySelector('#extract-panel .dropzone'), extractInput);
+enableFileDrop(document.getElementById('merge-center-dropzone'), fileInput);
+enableFileDrop(document.getElementById('extract-center-dropzone'), extractInput);
+enableFileDrop(wordCenterDropzone, wordInput);
+enableFileDrop(wordPdfDropzone, wordPdfInput);
+enableFileDrop(jpgCenterDropzone, jpgInput);
+enableFileDrop(imagesPdfDropzone, imagesPdfInput);
+enableFileDrop(ocrDropzone, ocrInput);
 
 document.addEventListener('dragover', (event) => {
     if (event.dataTransfer.types.includes('Files')) event.preventDefault();
@@ -157,7 +283,12 @@ fileInput.addEventListener('change', (event) => {
 
 function showStatus(message, color = 'var(--text-main)') {
     statusMsg.style.display = 'block';
-    statusMsg.style.color = color;
+    const paletteStatusColors = {
+        '#dc2626': 'var(--accent-color)',
+        '#16a34a': 'var(--primary-color)',
+        '#b7791f': 'var(--text-muted)'
+    };
+    statusMsg.style.color = paletteStatusColors[color] || color;
     statusMsg.innerText = message;
 }
 
@@ -168,6 +299,847 @@ function getSafeOutputName(input) {
         .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '_')
         .replace(/[. ]+$/, '');
 }
+
+function getPdfPageText(textContent) {
+    const items = textContent.items
+        .filter((item) => typeof item.str === 'string' && item.str.trim())
+        .map((item) => {
+            const style = textContent.styles[item.fontName] || {};
+            const fontSize = Math.hypot(item.transform[0], item.transform[1]) || Math.abs(item.transform[3]) || 12;
+            return {
+                text: item.str.trim(),
+                x: item.transform[4],
+                y: item.transform[5],
+                width: item.width,
+                fontSize,
+                fontName: item.fontName,
+                fontFamily: style.fontFamily,
+                bold: /bold|black|heavy|demi|semibold/i.test(`${item.fontName} ${style.fontFamily || ''}`),
+                italics: /italic|oblique/i.test(`${item.fontName} ${style.fontFamily || ''}`)
+            };
+        })
+        .sort((a, b) => b.y - a.y || a.x - b.x);
+    const lines = [];
+
+    items.forEach((item) => {
+        let line = lines[lines.length - 1];
+        const tolerance = Math.max(2, item.fontSize * 0.25);
+        if (!line || Math.abs(line.y - item.y) > tolerance) {
+            line = { y: item.y, items: [], fontSize: item.fontSize };
+            lines.push(line);
+        }
+        line.items.push(item);
+        line.fontSize = Math.max(line.fontSize, item.fontSize);
+        line.y = line.items.reduce((sum, lineItem) => sum + lineItem.y, 0) / line.items.length;
+    });
+
+    const positionedLines = lines.map((line) => {
+        line.items.sort((a, b) => a.x - b.x);
+        return {
+            ...line,
+            text: line.items.map((item) => item.text).join(' ').replace(/[ \t]+/g, ' ').trim(),
+            top: Math.max(0, textContent.pageHeight - line.y - line.fontSize)
+        };
+    }).filter((line) => line.text);
+
+    return {
+        lines: positionedLines,
+        text: positionedLines.map((line) => line.text).join('\n')
+    };
+}
+
+wordInput.addEventListener('change', async () => {
+    const file = wordInput.files[0];
+    wordInput.value = '';
+    if (!file) return;
+
+    const loadId = ++wordLoadId;
+    wordExtractedPages = [];
+    wordConvertButton.disabled = true;
+    wordCenterDropzone.dataset.hasFiles = 'true';
+    wordCenterUpload.querySelector('span').textContent = `PDF selecionado: ${file.name}. Arraste outro para substituir`;
+    wordPreviewText.hidden = true;
+    wordPreviewText.textContent = '';
+    wordPreviewPages.textContent = '';
+    wordPreviewMessage.hidden = false;
+    wordPreviewMessage.textContent = 'Extraindo texto do PDF...';
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+        wordCenterDropzone.dataset.hasFiles = 'false';
+        wordCenterUpload.querySelector('span').textContent = 'Anexe ou arraste um PDF para converter';
+        wordPreviewMessage.textContent = 'Selecione um arquivo PDF para continuar.';
+        showStatus('Selecione um arquivo no formato PDF.', '#dc2626');
+        return;
+    }
+
+    wordOutputNameInput.value = `${file.name.replace(/\.pdf$/i, '')}_convertido`;
+    let pdfDocument = null;
+    try {
+        if (!window.pdfjsLib) {
+            throw new Error('Não foi possível carregar a biblioteca de leitura de PDF. Verifique sua conexão com a internet.');
+        }
+        const loadingTask = pdfjsLib.getDocument({
+            data: new Uint8Array(await file.arrayBuffer())
+        });
+        pdfDocument = await loadingTask.promise;
+        if (loadId !== wordLoadId) return;
+
+        for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
+            const page = await pdfDocument.getPage(pageNumber);
+            const content = await page.getTextContent();
+            const viewport = page.getViewport({ scale: 1 });
+            const pageLayout = getPdfPageText({ ...content, pageHeight: viewport.height });
+            wordExtractedPages.push({
+                ...pageLayout,
+                width: viewport.width,
+                height: viewport.height
+            });
+            if (loadId !== wordLoadId) return;
+        }
+
+        const extractedText = wordExtractedPages
+            .filter((page) => page.text)
+            .map((page) => page.text)
+            .join('\n\n');
+        wordPreviewPages.textContent = `${pdfDocument.numPages} ${pdfDocument.numPages === 1 ? 'página' : 'páginas'}`;
+        if (!extractedText) {
+            wordPreviewMessage.textContent = 'Não foi encontrado texto selecionável neste PDF. Arquivos digitalizados como imagem precisam de OCR, que não está disponível nesta conversão.';
+            showStatus('O PDF não contém texto selecionável para converter.', '#b7791f');
+            return;
+        }
+
+        wordPreviewMessage.hidden = true;
+        wordPreviewText.textContent = extractedText.length > 12000
+            ? `${extractedText.slice(0, 12000)}\n\n... Pré-visualização limitada. O documento Word conterá o texto completo.`
+            : extractedText;
+        wordPreviewText.hidden = false;
+        wordConvertButton.disabled = false;
+        showStatus(`Texto extraído de ${file.name}. Pronto para converter para Word.`, '#16a34a');
+    } catch (error) {
+        if (loadId !== wordLoadId) return;
+        console.error(error);
+        const details = error instanceof Error ? error.message : String(error);
+        wordCenterDropzone.dataset.hasFiles = 'false';
+        wordCenterUpload.querySelector('span').textContent = 'Anexe ou arraste um PDF para converter';
+        wordPreviewMessage.textContent = 'Não foi possível ler o texto deste PDF.';
+        wordExtractedPages = [];
+        showStatus(`❌ Não foi possível abrir o PDF.\nDetalhe: ${details}`, '#dc2626');
+    } finally {
+        if (pdfDocument) {
+            pdfDocument.destroy().catch((error) => {
+                console.error('Não foi possível encerrar a leitura do PDF para conversão.', error);
+            });
+        }
+    }
+});
+
+wordConvertButton.addEventListener('click', async () => {
+    const outputName = getSafeOutputName(wordOutputNameInput);
+    if (!outputName) {
+        showStatus('Digite um nome válido para o arquivo Word.', '#dc2626');
+        wordOutputNameInput.focus();
+        return;
+    }
+
+    if (!window.docxGenerator || !wordExtractedPages.some((page) => page.text)) {
+        showStatus('❌ Não foi possível carregar a biblioteca do Word ou não há texto pronto para converter. Verifique sua conexão e tente novamente.', '#dc2626');
+        return;
+    }
+
+    try {
+        wordConvertButton.disabled = true;
+        showStatus('⏳ Recriando as páginas e posicionando o texto editável...');
+        const maxPageWidth = 31680;
+        const maxPageHeight = 31680;
+        const sections = wordExtractedPages.map((pageLayout) => {
+            const scale = Math.min(1, maxPageWidth / (pageLayout.width * 20), maxPageHeight / (pageLayout.height * 20));
+            const pageWidth = Math.round(pageLayout.width * 20 * scale);
+            const pageHeight = Math.round(pageLayout.height * 20 * scale);
+            const isLandscape = pageWidth > pageHeight;
+            let previousTop = 0;
+            const children = pageLayout.lines.map((line) => {
+                const topSpacing = Math.max(0, (line.top - previousTop) * 20 * scale);
+                previousTop = line.top + line.fontSize;
+                const runs = [];
+                line.items.forEach((item, index) => {
+                    if (index > 0) runs.push(new window.docxGenerator.TextRun(' '));
+                    const runOptions = {
+                        text: item.text,
+                        size: Math.max(8, Math.min(144, Math.round(item.fontSize * scale * 2))),
+                        bold: item.bold,
+                        italics: item.italics
+                    };
+                    if (item.fontFamily && /^[\w -]+$/.test(item.fontFamily)) {
+                        runOptions.font = { name: item.fontFamily };
+                    }
+                    runs.push(new window.docxGenerator.TextRun(runOptions));
+                });
+                return new window.docxGenerator.Paragraph({
+                    children: runs,
+                    indent: { left: Math.max(0, Math.round(line.items[0].x * 20 * scale)) },
+                    spacing: {
+                        before: Math.round(topSpacing),
+                        after: 0,
+                        line: Math.max(1, Math.round(line.fontSize * 20 * scale)),
+                        lineRule: 'exact'
+                    }
+                });
+            });
+
+            return {
+                properties: {
+                    page: {
+                        size: {
+                            width: isLandscape ? pageHeight : pageWidth,
+                            height: isLandscape ? pageWidth : pageHeight,
+                            orientation: isLandscape
+                                ? window.docxGenerator.PageOrientation.LANDSCAPE
+                                : window.docxGenerator.PageOrientation.PORTRAIT
+                        },
+                        margin: { top: 0, right: 0, bottom: 0, left: 0 }
+                    }
+                },
+                children
+            };
+        });
+        const document = new window.docxGenerator.Document({
+            sections
+        });
+        const blob = await window.docxGenerator.Packer.toBlob(document);
+        downloadFile(blob, `${outputName}.docx`);
+        showStatus(`✅ Sucesso! O arquivo ${outputName}.docx foi baixado.`, '#16a34a');
+    } catch (error) {
+        console.error(error);
+        const details = error instanceof Error ? error.message : String(error);
+        showStatus(`❌ Não foi possível gerar o documento Word.\nDetalhe: ${details}`, '#dc2626');
+    } finally {
+        wordConvertButton.disabled = !wordExtractedPages.some((page) => page.text);
+    }
+});
+
+wordPdfInput.addEventListener('change', async () => {
+    const file = wordPdfInput.files[0];
+    wordPdfInput.value = '';
+    if (!file) return;
+
+    const loadId = ++wordPdfLoadId;
+    wordPdfHtml = '';
+    wordPdfConvertButton.disabled = true;
+    wordPdfDropzone.dataset.hasFiles = 'true';
+    wordPdfUpload.querySelector('span').textContent = `Arquivo selecionado: ${file.name}. Arraste outro para substituir`;
+    wordPdfContent.hidden = true;
+    wordPdfContent.replaceChildren();
+    wordPdfMessage.hidden = false;
+    wordPdfMessage.textContent = 'Lendo o documento Word...';
+
+    if (!file.name.toLowerCase().endsWith('.docx')) {
+        wordPdfDropzone.dataset.hasFiles = 'false';
+        wordPdfUpload.querySelector('span').textContent = 'Anexe ou arraste um arquivo Word (.docx)';
+        wordPdfMessage.textContent = 'Selecione um arquivo .docx. O formato antigo .doc não é compatível.';
+        showStatus('Selecione um arquivo Word no formato .docx.', '#dc2626');
+        return;
+    }
+
+    wordPdfOutputNameInput.value = `${file.name.replace(/\.docx$/i, '')}_convertido`;
+    try {
+        if (!window.docx || typeof window.docx.renderAsync !== 'function') {
+            throw new Error('Não foi possível carregar a biblioteca para renderizar arquivos Word. Verifique sua conexão com a internet.');
+        }
+
+        const arrayBuffer = await file.arrayBuffer();
+        if (loadId !== wordPdfLoadId) return;
+        await window.docx.renderAsync(
+            arrayBuffer,
+            wordPdfContent,
+            wordPdfContent,
+            {
+                className: 'docx',
+                inWrapper: true,
+                useBase64URL: true
+            }
+        );
+        if (loadId !== wordPdfLoadId) {
+            wordPdfContent.replaceChildren();
+            return;
+        }
+        if (!wordPdfContent.querySelector('.docx-wrapper')) {
+            throw new Error('O documento não contém conteúdo que possa ser convertido.');
+        }
+
+        wordPdfHtml = wordPdfContent.innerHTML;
+        wordPdfContent.hidden = false;
+        wordPdfMessage.hidden = true;
+        wordPdfConvertButton.disabled = false;
+        showStatus(`Documento ${file.name} carregado e pronto para converter.`, '#16a34a');
+    } catch (error) {
+        if (loadId !== wordPdfLoadId) return;
+        console.error(error);
+        const details = error instanceof Error ? error.message : String(error);
+        wordPdfDropzone.dataset.hasFiles = 'false';
+        wordPdfUpload.querySelector('span').textContent = 'Anexe ou arraste um arquivo Word (.docx)';
+        wordPdfContent.replaceChildren();
+        wordPdfContent.hidden = true;
+        wordPdfMessage.hidden = false;
+        wordPdfMessage.textContent = 'Não foi possível abrir este documento Word.';
+        showStatus(`❌ Não foi possível ler o arquivo Word.\nDetalhe: ${details}`, '#dc2626');
+    }
+});
+
+wordPdfConvertButton.addEventListener('click', async () => {
+    const outputName = getSafeOutputName(wordPdfOutputNameInput);
+    if (!outputName) {
+        showStatus('Digite um nome válido para o arquivo PDF.', '#dc2626');
+        wordPdfOutputNameInput.focus();
+        return;
+    }
+    if (!window.html2pdf || !wordPdfHtml) {
+        showStatus('❌ Não foi possível carregar a biblioteca de conversão ou o documento ainda não está pronto. Verifique sua conexão e tente novamente.', '#dc2626');
+        return;
+    }
+
+    try {
+        wordPdfConvertButton.disabled = true;
+        wordPdfContent.classList.add('is-exporting');
+        showStatus('⏳ Gerando o arquivo PDF...');
+        await html2pdf()
+            .set({
+                margin: [12, 12, 12, 12],
+                filename: `${outputName}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, backgroundColor: '#ffffff' },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'] }
+            })
+            .from(wordPdfContent)
+            .save();
+        showStatus(`✅ Sucesso! O arquivo ${outputName}.pdf foi baixado.`, '#16a34a');
+    } catch (error) {
+        console.error(error);
+        const details = error instanceof Error ? error.message : String(error);
+        showStatus(`❌ Não foi possível converter o Word para PDF.\nDetalhe: ${details}`, '#dc2626');
+    } finally {
+        wordPdfContent.classList.remove('is-exporting');
+        wordPdfConvertButton.disabled = !wordPdfHtml;
+    }
+});
+
+function addWhiteBackground(canvas) {
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    return context;
+}
+
+function canvasToJpegBlob(canvas, quality = 1) {
+    return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+            if (!blob) {
+                reject(new Error('O navegador não conseguiu gerar uma imagem JPG para uma das páginas.'));
+                return;
+            }
+            resolve(blob);
+        }, 'image/jpeg', quality);
+    });
+}
+
+jpgInput.addEventListener('change', async () => {
+    const file = jpgInput.files[0];
+    jpgInput.value = '';
+    if (!file) return;
+
+    const loadId = ++jpgLoadId;
+    const previousDocument = jpgPdfDocument;
+    jpgPdfDocument = null;
+    if (previousDocument) {
+        try {
+            await previousDocument.destroy();
+        } catch (error) {
+            console.error('Não foi possível encerrar a pré-visualização anterior do PDF para JPG.', error);
+        }
+    }
+
+    jpgConvertButton.disabled = true;
+    jpgPreviewGrid.hidden = true;
+    jpgPreviewGrid.replaceChildren();
+    jpgPreviewCount.textContent = '';
+    jpgCenterDropzone.dataset.hasFiles = 'true';
+    jpgCenterUpload.querySelector('span').textContent = `PDF selecionado: ${file.name}. Arraste outro para substituir`;
+    jpgPreviewMessage.hidden = false;
+    jpgPreviewMessage.textContent = 'Carregando páginas do PDF...';
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+        jpgCenterDropzone.dataset.hasFiles = 'false';
+        jpgCenterUpload.querySelector('span').textContent = 'Anexe ou arraste um PDF para converter';
+        jpgPreviewMessage.textContent = 'Selecione um arquivo PDF para continuar.';
+        showStatus('Selecione um arquivo no formato PDF.', '#dc2626');
+        return;
+    }
+
+    jpgOutputNameInput.value = `${file.name.replace(/\.pdf$/i, '')}_jpg`;
+    let pdfDocument = null;
+    try {
+        if (!window.pdfjsLib) {
+            throw new Error('Não foi possível carregar a biblioteca de leitura de PDF. Verifique sua conexão com a internet.');
+        }
+
+        const loadingTask = pdfjsLib.getDocument({
+            data: new Uint8Array(await file.arrayBuffer())
+        });
+        pdfDocument = await loadingTask.promise;
+        if (loadId !== jpgLoadId) {
+            await pdfDocument.destroy();
+            return;
+        }
+        jpgPdfDocument = pdfDocument;
+
+        jpgPreviewGrid.hidden = false;
+        jpgPreviewMessage.hidden = true;
+        jpgPreviewCount.textContent = `${pdfDocument.numPages} ${pdfDocument.numPages === 1 ? 'página' : 'páginas'}`;
+
+        for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
+            if (loadId !== jpgLoadId) return;
+            const page = await pdfDocument.getPage(pageNumber);
+            const viewport = page.getViewport({ scale: 0.55 });
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.ceil(viewport.width);
+            canvas.height = Math.ceil(viewport.height);
+            const context = addWhiteBackground(canvas);
+            await page.render({ canvasContext: context, viewport, background: '#ffffff' }).promise;
+
+            const card = document.createElement('div');
+            const label = document.createElement('span');
+            card.className = 'jpg-preview-card';
+            label.textContent = `Página ${pageNumber}`;
+            card.append(canvas, label);
+            jpgPreviewGrid.appendChild(card);
+        }
+
+        if (loadId === jpgLoadId) {
+            jpgConvertButton.disabled = false;
+            showStatus(`PDF carregado: ${file.name}. ${pdfDocument.numPages} página(s) pronta(s) para converter.`, '#16a34a');
+        }
+    } catch (error) {
+        if (loadId !== jpgLoadId) return;
+        console.error(error);
+        const details = error instanceof Error ? error.message : String(error);
+        jpgPreviewGrid.hidden = true;
+        jpgPreviewMessage.hidden = false;
+        jpgPreviewMessage.textContent = 'Não foi possível abrir ou pré-visualizar este PDF.';
+        jpgPreviewCount.textContent = '';
+        jpgCenterDropzone.dataset.hasFiles = 'false';
+        jpgCenterUpload.querySelector('span').textContent = 'Anexe ou arraste um PDF para converter';
+        if (jpgPdfDocument === pdfDocument) jpgPdfDocument = null;
+        showStatus(`❌ Não foi possível abrir o PDF.\nDetalhe: ${details}`, '#dc2626');
+        if (pdfDocument) {
+            await pdfDocument.destroy().catch((destroyError) => {
+                console.error('Não foi possível encerrar o PDF após falha na pré-visualização JPG.', destroyError);
+            });
+        }
+    }
+});
+
+jpgConvertButton.addEventListener('click', async () => {
+    if (!jpgPdfDocument) return;
+    const outputName = getSafeOutputName(jpgOutputNameInput).replace(/\.zip$/i, '');
+    if (!outputName) {
+        showStatus('Digite um nome válido para o arquivo ZIP.', '#dc2626');
+        jpgOutputNameInput.focus();
+        return;
+    }
+    if (!window.JSZip) {
+        showStatus('❌ Não foi possível carregar a biblioteca ZIP. Verifique sua conexão com a internet e abra esta página novamente.', '#dc2626');
+        return;
+    }
+
+    const sourceDocument = jpgPdfDocument;
+    const zip = new JSZip();
+
+    try {
+        jpgConvertButton.disabled = true;
+        for (let pageNumber = 1; pageNumber <= sourceDocument.numPages; pageNumber += 1) {
+            showStatus(`⏳ Convertendo página ${pageNumber} de ${sourceDocument.numPages}...`);
+            const page = await sourceDocument.getPage(pageNumber);
+            const viewport = page.getViewport({ scale: 2 });
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.ceil(viewport.width);
+            canvas.height = Math.ceil(viewport.height);
+            const context = addWhiteBackground(canvas);
+            await page.render({ canvasContext: context, viewport, background: '#ffffff' }).promise;
+            const blob = await canvasToJpegBlob(canvas);
+            const pageName = `pagina_${String(pageNumber).padStart(3, '0')}.jpg`;
+            zip.file(pageName, blob);
+            canvas.width = 0;
+            canvas.height = 0;
+        }
+
+        showStatus('⏳ Compactando imagens...');
+        const zipBlob = await zip.generateAsync({ type: 'blob' }, (progress) => {
+            showStatus(`⏳ Compactando imagens: ${Math.round(progress.percent)}%`);
+        });
+        downloadFile(zipBlob, `${outputName}.zip`);
+        showStatus(`✅ Sucesso! ${sourceDocument.numPages} imagem(ns) JPG foram baixadas em ${outputName}.zip.`, '#16a34a');
+    } catch (error) {
+        console.error(error);
+        const details = error instanceof Error ? error.message : String(error);
+        showStatus(`❌ Não foi possível converter o PDF para JPG.\nDetalhe: ${details}`, '#dc2626');
+    } finally {
+        jpgConvertButton.disabled = !jpgPdfDocument;
+    }
+});
+
+ocrInput.addEventListener('change', async () => {
+    const file = ocrInput.files[0];
+    ocrInput.value = '';
+    if (!file || ocrProcessing) return;
+
+    const loadId = ++ocrLoadId;
+    const previousDocument = ocrPdfDocument;
+    ocrPdfDocument = null;
+    ocrFile = null;
+    ocrConvertButton.disabled = true;
+    ocrPreviewGrid.hidden = true;
+    ocrPreviewGrid.replaceChildren();
+    ocrPreviewCount.textContent = '';
+    ocrDropzone.dataset.hasFiles = 'true';
+    ocrUpload.querySelector('span').textContent = `PDF selecionado: ${file.name}. Arraste outro para substituir`;
+    ocrPreviewMessage.hidden = false;
+    ocrPreviewMessage.textContent = 'Carregando páginas do PDF...';
+
+    if (previousDocument) {
+        try {
+            await previousDocument.destroy();
+        } catch (error) {
+            console.error('Não foi possível encerrar a pré-visualização OCR anterior.', error);
+        }
+    }
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+        ocrDropzone.dataset.hasFiles = 'false';
+        ocrUpload.querySelector('span').textContent = 'Anexe ou arraste um PDF para aplicar OCR';
+        ocrPreviewMessage.textContent = 'Selecione um arquivo PDF para continuar.';
+        showStatus('Selecione um arquivo no formato PDF.', '#dc2626');
+        return;
+    }
+
+    ocrOutputNameInput.value = `${file.name.replace(/\.pdf$/i, '')}_ocr`;
+    let pdfDocument = null;
+    try {
+        if (!window.pdfjsLib) {
+            throw new Error('Não foi possível carregar a biblioteca de leitura de PDF. Verifique sua conexão com a internet.');
+        }
+
+        const loadingTask = pdfjsLib.getDocument({
+            data: new Uint8Array(await file.arrayBuffer())
+        });
+        pdfDocument = await loadingTask.promise;
+        if (loadId !== ocrLoadId) {
+            await pdfDocument.destroy();
+            return;
+        }
+        ocrPdfDocument = pdfDocument;
+        ocrFile = file;
+        ocrPreviewGrid.hidden = false;
+        ocrPreviewMessage.hidden = true;
+        ocrPreviewCount.textContent = `${pdfDocument.numPages} ${pdfDocument.numPages === 1 ? 'página' : 'páginas'}`;
+
+        for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
+            if (loadId !== ocrLoadId) return;
+            const page = await pdfDocument.getPage(pageNumber);
+            const viewport = page.getViewport({ scale: 0.5 });
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.ceil(viewport.width);
+            canvas.height = Math.ceil(viewport.height);
+            const context = addWhiteBackground(canvas);
+            await page.render({ canvasContext: context, viewport, background: '#ffffff' }).promise;
+
+            const card = document.createElement('div');
+            const label = document.createElement('span');
+            card.className = 'jpg-preview-card';
+            label.textContent = `Página ${pageNumber}`;
+            card.append(canvas, label);
+            ocrPreviewGrid.appendChild(card);
+        }
+
+        if (loadId === ocrLoadId) {
+            ocrConvertButton.disabled = false;
+            showStatus(`PDF carregado: ${file.name}. Pronto para aplicar OCR.`, '#16a34a');
+        }
+    } catch (error) {
+        if (loadId !== ocrLoadId) return;
+        console.error(error);
+        const details = error instanceof Error ? error.message : String(error);
+        ocrPreviewGrid.hidden = true;
+        ocrPreviewMessage.hidden = false;
+        ocrPreviewMessage.textContent = 'Não foi possível abrir ou pré-visualizar este PDF.';
+        ocrPreviewCount.textContent = '';
+        ocrDropzone.dataset.hasFiles = 'false';
+        ocrUpload.querySelector('span').textContent = 'Anexe ou arraste um PDF para aplicar OCR';
+        ocrFile = null;
+        ocrPdfDocument = null;
+        showStatus(`❌ Não foi possível abrir o PDF.\nDetalhe: ${details}`, '#dc2626');
+        if (pdfDocument) {
+            await pdfDocument.destroy().catch((destroyError) => {
+                console.error('Não foi possível encerrar o PDF após falha na pré-visualização OCR.', destroyError);
+            });
+        }
+    }
+});
+
+ocrConvertButton.addEventListener('click', async () => {
+    if (!ocrPdfDocument || !ocrFile) return;
+
+    const outputName = getSafeOutputName(ocrOutputNameInput);
+    if (!outputName) {
+        showStatus('Digite um nome válido para o arquivo PDF.', '#dc2626');
+        ocrOutputNameInput.focus();
+        return;
+    }
+    if (!window.PDFLib || !window.Tesseract) {
+        showStatus('❌ Não foi possível carregar as bibliotecas para gerar o PDF ou aplicar OCR. Verifique sua conexão com a internet e abra esta página novamente.', '#dc2626');
+        return;
+    }
+
+    const sourceDocument = ocrPdfDocument;
+    const language = ocrLanguageInput.value;
+    let worker = null;
+    let pagesWithoutText = 0;
+
+    try {
+        ocrProcessing = true;
+        ocrConvertButton.disabled = true;
+        ocrInput.disabled = true;
+        ocrUpload.disabled = true;
+        ocrLanguageInput.disabled = true;
+        ocrOutputNameInput.disabled = true;
+        showStatus('⏳ Preparando o mecanismo de OCR. Na primeira utilização, os dados do idioma podem levar alguns instantes para baixar...');
+        worker = await Tesseract.createWorker(language, 1, {
+            logger: (progress) => {
+                if (progress.status && progress.status !== 'recognizing text') {
+                    showStatus(`⏳ OCR: ${progress.status}${Number.isFinite(progress.progress) ? ` (${Math.round(progress.progress * 100)}%)` : ''}`);
+                }
+            }
+        });
+
+        const searchablePdf = await PDFLib.PDFDocument.create();
+        const font = await searchablePdf.embedFont(PDFLib.StandardFonts.Helvetica);
+
+        for (let pageNumber = 1; pageNumber <= sourceDocument.numPages; pageNumber += 1) {
+            showStatus(`⏳ Aplicando OCR na página ${pageNumber} de ${sourceDocument.numPages}...`);
+            const page = await sourceDocument.getPage(pageNumber);
+            const originalViewport = page.getViewport({ scale: 1 });
+            const renderScale = Math.min(2.5, 3000 / Math.max(originalViewport.width, originalViewport.height));
+            const viewport = page.getViewport({ scale: renderScale });
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.ceil(viewport.width);
+            canvas.height = Math.ceil(viewport.height);
+            const context = addWhiteBackground(canvas);
+            await page.render({ canvasContext: context, viewport, background: '#ffffff' }).promise;
+
+            const { data } = await worker.recognize(canvas);
+            const words = (data.words || []).filter((word) => word.text && word.text.trim() && word.bbox);
+            if (!words.length) pagesWithoutText += 1;
+
+            const imageBlob = await canvasToJpegBlob(canvas, 0.96);
+            const image = await searchablePdf.embedJpg(new Uint8Array(await imageBlob.arrayBuffer()));
+            const outputPage = searchablePdf.addPage([originalViewport.width, originalViewport.height]);
+            outputPage.drawImage(image, {
+                x: 0,
+                y: 0,
+                width: originalViewport.width,
+                height: originalViewport.height
+            });
+
+            const scaleX = originalViewport.width / canvas.width;
+            const scaleY = originalViewport.height / canvas.height;
+            words.forEach((word) => {
+                const boxHeight = (word.bbox.y1 - word.bbox.y0) * scaleY;
+                if (boxHeight <= 0) return;
+                const fontSize = Math.min(72, Math.max(1, boxHeight * 0.82));
+                outputPage.drawText(word.text.trim(), {
+                    x: Math.max(0, word.bbox.x0 * scaleX),
+                    y: Math.max(0, originalViewport.height - word.bbox.y1 * scaleY + fontSize * 0.08),
+                    size: fontSize,
+                    font,
+                    color: PDFLib.rgb(0, 0, 0),
+                    opacity: 0
+                });
+            });
+
+            canvas.width = 0;
+            canvas.height = 0;
+        }
+
+        showStatus('⏳ Finalizando o PDF pesquisável...');
+        const pdfBytes = await searchablePdf.save();
+        downloadPdf(pdfBytes, outputName);
+        const warning = pagesWithoutText
+            ? ` ${pagesWithoutText} página(s) não tiveram texto reconhecido.`
+            : '';
+        showStatus(`✅ OCR concluído. O arquivo ${outputName}.pdf está pronto para pesquisa.${warning}`, pagesWithoutText ? '#b7791f' : '#16a34a');
+    } catch (error) {
+        console.error(error);
+        const details = error instanceof Error ? error.message : String(error);
+        showStatus(`❌ Não foi possível aplicar OCR ao PDF.\nDetalhe: ${details}`, '#dc2626');
+    } finally {
+        if (worker) {
+            try {
+                await worker.terminate();
+            } catch (error) {
+                console.error('Não foi possível encerrar o mecanismo de OCR.', error);
+            }
+        }
+        ocrProcessing = false;
+        ocrInput.disabled = false;
+        ocrUpload.disabled = false;
+        ocrLanguageInput.disabled = false;
+        ocrOutputNameInput.disabled = false;
+        ocrConvertButton.disabled = !ocrPdfDocument;
+    }
+});
+
+function renderImageFiles() {
+    imagePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    imagePreviewUrls = [];
+    imagesPdfGrid.replaceChildren();
+
+    imageFiles.forEach((file, index) => {
+        const card = document.createElement('article');
+        const image = document.createElement('img');
+        const caption = document.createElement('div');
+        const label = document.createElement('span');
+        const removeButton = document.createElement('button');
+        const previewUrl = URL.createObjectURL(file);
+
+        imagePreviewUrls.push(previewUrl);
+        card.className = 'images-pdf-card';
+        card.draggable = true;
+        card.dataset.index = String(index);
+        image.src = previewUrl;
+        image.alt = `Pré-visualização de ${file.name}`;
+        label.textContent = `${index + 1}. ${file.name}`;
+        label.title = file.name;
+        removeButton.type = 'button';
+        removeButton.className = 'file-item-remove';
+        removeButton.textContent = 'Remover';
+        removeButton.setAttribute('aria-label', `Remover ${file.name}`);
+        removeButton.addEventListener('click', () => {
+            imageFiles.splice(index, 1);
+            renderImageFiles();
+        });
+
+        card.addEventListener('dragstart', (event) => {
+            event.dataTransfer.setData('text/plain', String(index));
+            event.dataTransfer.effectAllowed = 'move';
+            card.classList.add('is-dragging');
+        });
+        card.addEventListener('dragend', () => {
+            card.classList.remove('is-dragging');
+            imagesPdfGrid.querySelectorAll('.drag-target').forEach((target) => {
+                target.classList.remove('drag-target');
+            });
+        });
+        card.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            card.classList.add('drag-target');
+        });
+        card.addEventListener('dragleave', () => card.classList.remove('drag-target'));
+        card.addEventListener('drop', (event) => {
+            event.preventDefault();
+            card.classList.remove('drag-target');
+            const fromIndex = Number(event.dataTransfer.getData('text/plain'));
+            if (!Number.isInteger(fromIndex) || fromIndex < 0 ||
+                fromIndex >= imageFiles.length || fromIndex === index) return;
+            const [movedFile] = imageFiles.splice(fromIndex, 1);
+            imageFiles.splice(index, 0, movedFile);
+            renderImageFiles();
+        });
+
+        caption.className = 'images-pdf-caption';
+        caption.append(label, removeButton);
+        card.append(image, caption);
+        imagesPdfGrid.appendChild(card);
+    });
+
+    const hasImages = imageFiles.length > 0;
+    imagesPdfDropzone.dataset.hasFiles = String(hasImages);
+    imagesPdfUpload.querySelector('span').textContent = hasImages
+        ? 'Arraste mais JPGs para adicionar'
+        : 'Anexe ou arraste imagens JPG';
+    imagesPdfCount.textContent = hasImages
+        ? `${imageFiles.length} ${imageFiles.length === 1 ? 'imagem' : 'imagens'}`
+        : '';
+    imagesPdfGrid.hidden = !hasImages;
+    imagesPdfMessage.hidden = hasImages;
+    imagesPdfMessage.textContent = hasImages
+        ? ''
+        : 'Adicione uma ou mais imagens JPG. Arraste as miniaturas para definir a ordem das páginas.';
+    imagesPdfConvertButton.disabled = !hasImages;
+}
+
+imagesPdfInput.addEventListener('change', () => {
+    const files = Array.from(imagesPdfInput.files);
+    imagesPdfInput.value = '';
+    if (!files.length) return;
+
+    const validFiles = files.filter((file) =>
+        file.type === 'image/jpeg' || /\.(jpe?g)$/i.test(file.name)
+    );
+    const invalidFiles = files.filter((file) => !validFiles.includes(file));
+
+    if (validFiles.length) {
+        imageFiles.push(...validFiles);
+        renderImageFiles();
+    }
+
+    if (invalidFiles.length) {
+        const names = invalidFiles.map((file) => file.name).join(', ');
+        showStatus(`Estes arquivos não são JPG e foram ignorados: ${names}`, '#dc2626');
+    } else if (validFiles.length) {
+        showStatus(`${validFiles.length} imagem(ns) JPG adicionada(s). Total: ${imageFiles.length}.`, '#16a34a');
+    }
+});
+
+imagesPdfConvertButton.addEventListener('click', async () => {
+    if (!imageFiles.length) return;
+    const outputName = getSafeOutputName(imagesPdfOutputNameInput);
+    if (!outputName) {
+        showStatus('Digite um nome válido para o arquivo PDF.', '#dc2626');
+        imagesPdfOutputNameInput.focus();
+        return;
+    }
+    if (!window.PDFLib) {
+        showStatus('❌ Não foi possível carregar a biblioteca de PDF. Verifique sua conexão com a internet e abra esta página novamente.', '#dc2626');
+        return;
+    }
+
+    const filesToConvert = [...imageFiles];
+    try {
+        imagesPdfConvertButton.disabled = true;
+        const pdfDocument = await PDFLib.PDFDocument.create();
+
+        for (let index = 0; index < filesToConvert.length; index += 1) {
+            const file = filesToConvert[index];
+            showStatus(`⏳ Adicionando imagem ${index + 1} de ${filesToConvert.length}: ${file.name}`);
+            const image = await pdfDocument.embedJpg(await file.arrayBuffer());
+            const scale = Math.min(0.75, 14400 / image.width, 14400 / image.height);
+            const width = image.width * scale;
+            const height = image.height * scale;
+            const page = pdfDocument.addPage([width, height]);
+            page.drawImage(image, { x: 0, y: 0, width, height });
+        }
+
+        const pdfBytes = await pdfDocument.save();
+        downloadPdf(pdfBytes, outputName);
+        showStatus(`✅ Sucesso! ${filesToConvert.length} imagem(ns) foram convertidas para ${outputName}.pdf.`, '#16a34a');
+    } catch (error) {
+        console.error(error);
+        const details = error instanceof Error ? error.message : String(error);
+        showStatus(`❌ Não foi possível converter as imagens para PDF.\nDetalhe: ${details}`, '#dc2626');
+    } finally {
+        imagesPdfConvertButton.disabled = imageFiles.length === 0;
+    }
+});
 
 function downloadPdf(bytes, filename) {
     const blob = new Blob([bytes], { type: 'application/pdf' });
@@ -634,6 +1606,11 @@ function activateSplitPart(index) {
 }
 
 function renderFiles() {
+    const mergeCenterDropzone = document.getElementById('merge-center-dropzone');
+    mergeCenterDropzone.dataset.hasFiles = String(selectedFiles.length > 0);
+    mergeCenterUpload.querySelector('span').textContent = selectedFiles.length
+        ? 'Arraste mais PDFs para adicionar à pré-visualização'
+        : 'Arraste arquivos PDF para cá ou clique para anexar';
     fileListContainer.innerHTML = '';
     selectedFiles.forEach((file, index) => {
         const item = document.createElement('div');
@@ -766,6 +1743,8 @@ extractInput.addEventListener('change', async () => {
     previewDocument = null;
     previewLoadingTask = null;
     extractFile = file;
+    document.getElementById('extract-center-dropzone').dataset.hasFiles = 'true';
+    extractCenterUpload.querySelector('span').textContent = 'Arraste outro PDF para substituir o documento';
     extractPageCount = 0;
     singleExtractPages = new Set();
     splitParts = [{ pages: new Set(), name: '' }];
@@ -805,6 +1784,8 @@ extractInput.addEventListener('change', async () => {
         console.error(error);
         const details = error instanceof Error ? error.message : String(error);
         extractFile = null;
+        document.getElementById('extract-center-dropzone').dataset.hasFiles = 'false';
+        extractCenterUpload.querySelector('span').textContent = 'Arraste um PDF para cá ou clique para anexar';
         updateExtractControls();
         showStatus(`❌ Não foi possível abrir ou pré-visualizar o PDF.\nDetalhe: ${details}`, '#dc2626');
     }
