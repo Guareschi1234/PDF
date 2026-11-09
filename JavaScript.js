@@ -250,6 +250,13 @@ function enableFileDrop(dropzone, input) {
     });
 }
 
+function setUploadState(dropzone, hasFiles) {
+    dropzone.dataset.hasFiles = String(hasFiles);
+    dropzone.parentElement.querySelectorAll('.editor-preview-content').forEach((preview) => {
+        preview.hidden = !hasFiles;
+    });
+}
+
 enableFileDrop(document.getElementById('merge-center-dropzone'), fileInput);
 enableFileDrop(document.getElementById('extract-center-dropzone'), extractInput);
 enableFileDrop(wordCenterDropzone, wordInput);
@@ -356,7 +363,7 @@ wordInput.addEventListener('change', async () => {
     const loadId = ++wordLoadId;
     wordExtractedPages = [];
     wordConvertButton.disabled = true;
-    wordCenterDropzone.dataset.hasFiles = 'true';
+    setUploadState(wordCenterDropzone, true);
     wordCenterUpload.querySelector('span').textContent = `PDF selecionado: ${file.name}. Arraste outro para substituir`;
     wordPreviewText.hidden = true;
     wordPreviewText.textContent = '';
@@ -365,7 +372,7 @@ wordInput.addEventListener('change', async () => {
     wordPreviewMessage.textContent = 'Extraindo texto do PDF...';
 
     if (!file.name.toLowerCase().endsWith('.pdf')) {
-        wordCenterDropzone.dataset.hasFiles = 'false';
+        setUploadState(wordCenterDropzone, false);
         wordCenterUpload.querySelector('span').textContent = 'Anexe ou arraste um PDF para converter';
         wordPreviewMessage.textContent = 'Selecione um arquivo PDF para continuar.';
         showStatus('Selecione um arquivo no formato PDF.', '#dc2626');
@@ -419,7 +426,7 @@ wordInput.addEventListener('change', async () => {
         if (loadId !== wordLoadId) return;
         console.error(error);
         const details = error instanceof Error ? error.message : String(error);
-        wordCenterDropzone.dataset.hasFiles = 'false';
+        setUploadState(wordCenterDropzone, false);
         wordCenterUpload.querySelector('span').textContent = 'Anexe ou arraste um PDF para converter';
         wordPreviewMessage.textContent = 'Não foi possível ler o texto deste PDF.';
         wordExtractedPages = [];
@@ -525,7 +532,7 @@ wordPdfInput.addEventListener('change', async () => {
     const loadId = ++wordPdfLoadId;
     wordPdfHtml = '';
     wordPdfConvertButton.disabled = true;
-    wordPdfDropzone.dataset.hasFiles = 'true';
+    setUploadState(wordPdfDropzone, true);
     wordPdfUpload.querySelector('span').textContent = `Arquivo selecionado: ${file.name}. Arraste outro para substituir`;
     wordPdfContent.hidden = true;
     wordPdfContent.replaceChildren();
@@ -533,7 +540,7 @@ wordPdfInput.addEventListener('change', async () => {
     wordPdfMessage.textContent = 'Lendo o documento Word...';
 
     if (!file.name.toLowerCase().endsWith('.docx')) {
-        wordPdfDropzone.dataset.hasFiles = 'false';
+        setUploadState(wordPdfDropzone, false);
         wordPdfUpload.querySelector('span').textContent = 'Anexe ou arraste um arquivo Word (.docx)';
         wordPdfMessage.textContent = 'Selecione um arquivo .docx. O formato antigo .doc não é compatível.';
         showStatus('Selecione um arquivo Word no formato .docx.', '#dc2626');
@@ -575,7 +582,7 @@ wordPdfInput.addEventListener('change', async () => {
         if (loadId !== wordPdfLoadId) return;
         console.error(error);
         const details = error instanceof Error ? error.message : String(error);
-        wordPdfDropzone.dataset.hasFiles = 'false';
+        setUploadState(wordPdfDropzone, false);
         wordPdfUpload.querySelector('span').textContent = 'Anexe ou arraste um arquivo Word (.docx)';
         wordPdfContent.replaceChildren();
         wordPdfContent.hidden = true;
@@ -662,13 +669,13 @@ jpgInput.addEventListener('change', async () => {
     jpgPreviewGrid.hidden = true;
     jpgPreviewGrid.replaceChildren();
     jpgPreviewCount.textContent = '';
-    jpgCenterDropzone.dataset.hasFiles = 'true';
+    setUploadState(jpgCenterDropzone, true);
     jpgCenterUpload.querySelector('span').textContent = `PDF selecionado: ${file.name}. Arraste outro para substituir`;
     jpgPreviewMessage.hidden = false;
     jpgPreviewMessage.textContent = 'Carregando páginas do PDF...';
 
     if (!file.name.toLowerCase().endsWith('.pdf')) {
-        jpgCenterDropzone.dataset.hasFiles = 'false';
+        setUploadState(jpgCenterDropzone, false);
         jpgCenterUpload.querySelector('span').textContent = 'Anexe ou arraste um PDF para converter';
         jpgPreviewMessage.textContent = 'Selecione um arquivo PDF para continuar.';
         showStatus('Selecione um arquivo no formato PDF.', '#dc2626');
@@ -726,7 +733,7 @@ jpgInput.addEventListener('change', async () => {
         jpgPreviewMessage.hidden = false;
         jpgPreviewMessage.textContent = 'Não foi possível abrir ou pré-visualizar este PDF.';
         jpgPreviewCount.textContent = '';
-        jpgCenterDropzone.dataset.hasFiles = 'false';
+        setUploadState(jpgCenterDropzone, false);
         jpgCenterUpload.querySelector('span').textContent = 'Anexe ou arraste um PDF para converter';
         if (jpgPdfDocument === pdfDocument) jpgPdfDocument = null;
         showStatus(`❌ Não foi possível abrir o PDF.\nDetalhe: ${details}`, '#dc2626');
@@ -800,7 +807,7 @@ ocrInput.addEventListener('change', async () => {
     ocrPreviewGrid.hidden = true;
     ocrPreviewGrid.replaceChildren();
     ocrPreviewCount.textContent = '';
-    ocrDropzone.dataset.hasFiles = 'true';
+    setUploadState(ocrDropzone, true);
     ocrUpload.querySelector('span').textContent = `PDF selecionado: ${file.name}. Arraste outro para substituir`;
     ocrPreviewMessage.hidden = false;
     ocrPreviewMessage.textContent = 'Carregando páginas do PDF...';
@@ -814,7 +821,7 @@ ocrInput.addEventListener('change', async () => {
     }
 
     if (!file.name.toLowerCase().endsWith('.pdf')) {
-        ocrDropzone.dataset.hasFiles = 'false';
+        setUploadState(ocrDropzone, false);
         ocrUpload.querySelector('span').textContent = 'Anexe ou arraste um PDF para aplicar OCR';
         ocrPreviewMessage.textContent = 'Selecione um arquivo PDF para continuar.';
         showStatus('Selecione um arquivo no formato PDF.', '#dc2626');
@@ -872,7 +879,7 @@ ocrInput.addEventListener('change', async () => {
         ocrPreviewMessage.hidden = false;
         ocrPreviewMessage.textContent = 'Não foi possível abrir ou pré-visualizar este PDF.';
         ocrPreviewCount.textContent = '';
-        ocrDropzone.dataset.hasFiles = 'false';
+        setUploadState(ocrDropzone, false);
         ocrUpload.querySelector('span').textContent = 'Anexe ou arraste um PDF para aplicar OCR';
         ocrFile = null;
         ocrPdfDocument = null;
@@ -1062,7 +1069,7 @@ function renderImageFiles() {
     });
 
     const hasImages = imageFiles.length > 0;
-    imagesPdfDropzone.dataset.hasFiles = String(hasImages);
+    setUploadState(imagesPdfDropzone, hasImages);
     imagesPdfUpload.querySelector('span').textContent = hasImages
         ? 'Arraste mais JPGs para adicionar'
         : 'Anexe ou arraste imagens JPG';
@@ -1607,7 +1614,7 @@ function activateSplitPart(index) {
 
 function renderFiles() {
     const mergeCenterDropzone = document.getElementById('merge-center-dropzone');
-    mergeCenterDropzone.dataset.hasFiles = String(selectedFiles.length > 0);
+    setUploadState(mergeCenterDropzone, selectedFiles.length > 0);
     mergeCenterUpload.querySelector('span').textContent = selectedFiles.length
         ? 'Arraste mais PDFs para adicionar à pré-visualização'
         : 'Arraste arquivos PDF para cá ou clique para anexar';
@@ -1743,7 +1750,7 @@ extractInput.addEventListener('change', async () => {
     previewDocument = null;
     previewLoadingTask = null;
     extractFile = file;
-    document.getElementById('extract-center-dropzone').dataset.hasFiles = 'true';
+    setUploadState(document.getElementById('extract-center-dropzone'), true);
     extractCenterUpload.querySelector('span').textContent = 'Arraste outro PDF para substituir o documento';
     extractPageCount = 0;
     singleExtractPages = new Set();
@@ -1784,7 +1791,7 @@ extractInput.addEventListener('change', async () => {
         console.error(error);
         const details = error instanceof Error ? error.message : String(error);
         extractFile = null;
-        document.getElementById('extract-center-dropzone').dataset.hasFiles = 'false';
+        setUploadState(document.getElementById('extract-center-dropzone'), false);
         extractCenterUpload.querySelector('span').textContent = 'Arraste um PDF para cá ou clique para anexar';
         updateExtractControls();
         showStatus(`❌ Não foi possível abrir ou pré-visualizar o PDF.\nDetalhe: ${details}`, '#dc2626');

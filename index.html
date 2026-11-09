@@ -70,14 +70,14 @@
 
             <section id="merge-panel" class="editor-panel" role="tabpanel" aria-labelledby="merge-tab">
                 <div class="editor-preview-column">
-                    <div class="dropzone editor-center-upload" id="merge-center-dropzone">
+                    <div class="dropzone editor-center-upload" id="merge-center-dropzone" data-has-files="false">
                         <button class="center-upload-button" id="merge-center-upload" type="button">
                             <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
                             <span>Arraste arquivos PDF para cá ou clique para anexar</span>
                         </button>
                         <input type="file" id="pdf-inputs" accept=".pdf" multiple>
                     </div>
-                    <section class="preview-section" aria-labelledby="merge-preview-title">
+                    <section class="preview-section editor-preview-content" id="merge-preview-section" aria-labelledby="merge-preview-title" hidden>
                         <div class="preview-heading">
                             <h2 id="merge-preview-title">Pré-visualização do PDF unido</h2>
                             <span id="merge-preview-count" aria-live="polite"></span>
@@ -103,21 +103,21 @@
 
             <section id="extract-panel" class="editor-panel" role="tabpanel" aria-labelledby="extract-tab" hidden>
                 <div class="editor-preview-column">
-                    <div class="dropzone editor-center-upload" id="extract-center-dropzone">
+                    <div class="dropzone editor-center-upload" id="extract-center-dropzone" data-has-files="false">
                         <button class="center-upload-button" id="extract-center-upload" type="button">
                             <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
                             <span>Arraste um PDF para cá ou clique para anexar</span>
                         </button>
                         <input type="file" id="extract-input" accept=".pdf">
                     </div>
-                    <div class="page-preview-toolbar">
+                    <div class="page-preview-toolbar editor-preview-content" id="extract-preview-toolbar" hidden>
                         <span id="selection-count" aria-live="polite">Nenhuma página selecionada</span>
                         <div class="page-preview-actions">
                             <button class="btn btn-outline-secondary btn-sm" id="select-all-pages" type="button" disabled>Selecionar todas</button>
                             <button class="btn btn-outline-secondary btn-sm" id="clear-pages" type="button" disabled>Limpar</button>
                         </div>
                     </div>
-                    <div class="page-preview" id="page-preview" aria-label="Pré-visualização das páginas do PDF"></div>
+                    <div class="page-preview editor-preview-content" id="page-preview" aria-label="Pré-visualização das páginas do PDF" hidden></div>
                 </div>
 
                 <aside class="editor-options" aria-label="Opções para extrair páginas">
@@ -155,14 +155,14 @@
 
             <section id="word-panel" class="editor-panel" role="tabpanel" aria-labelledby="word-tab" hidden>
                 <div class="editor-preview-column">
-                    <div class="dropzone editor-center-upload" id="word-center-dropzone">
+                    <div class="dropzone editor-center-upload" id="word-center-dropzone" data-has-files="false">
                         <button class="center-upload-button" id="word-center-upload" type="button">
                             <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
                             <span>Anexe ou arraste um PDF para converter</span>
                         </button>
                         <input type="file" id="word-input" accept=".pdf,application/pdf">
                     </div>
-                    <section class="preview-section word-preview-section" aria-labelledby="word-preview-title">
+                    <section class="preview-section word-preview-section editor-preview-content" id="word-preview-section" aria-labelledby="word-preview-title" hidden>
                         <div class="preview-heading">
                             <h2 id="word-preview-title">Pré-visualização do texto</h2>
                             <span id="word-preview-pages" aria-live="polite"></span>
@@ -185,14 +185,14 @@
 
             <section id="word-pdf-panel" class="editor-panel" role="tabpanel" aria-labelledby="word-pdf-tab" hidden>
                 <div class="editor-preview-column">
-                    <div class="dropzone editor-center-upload" id="word-pdf-dropzone">
+                    <div class="dropzone editor-center-upload" id="word-pdf-dropzone" data-has-files="false">
                         <button class="center-upload-button" id="word-pdf-upload" type="button">
                             <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
                             <span>Anexe ou arraste um arquivo Word (.docx)</span>
                         </button>
                         <input type="file" id="word-pdf-input" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
                     </div>
-                    <section class="preview-section word-pdf-preview-section" aria-labelledby="word-pdf-preview-title">
+                    <section class="preview-section word-pdf-preview-section editor-preview-content" id="word-pdf-preview-section" aria-labelledby="word-pdf-preview-title" hidden>
                         <div class="preview-heading">
                             <h2 id="word-pdf-preview-title">Pré-visualização do documento</h2>
                         </div>
@@ -214,14 +214,14 @@
 
             <section id="jpg-panel" class="editor-panel" role="tabpanel" aria-labelledby="jpg-tab" hidden>
                 <div class="editor-preview-column">
-                    <div class="dropzone editor-center-upload" id="jpg-center-dropzone">
+                    <div class="dropzone editor-center-upload" id="jpg-center-dropzone" data-has-files="false">
                         <button class="center-upload-button" id="jpg-center-upload" type="button">
                             <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
                             <span>Anexe ou arraste um PDF para converter</span>
                         </button>
                         <input type="file" id="jpg-input" accept=".pdf,application/pdf">
                     </div>
-                    <section class="preview-section" aria-labelledby="jpg-preview-title">
+                    <section class="preview-section editor-preview-content" id="jpg-preview-section" aria-labelledby="jpg-preview-title" hidden>
                         <div class="preview-heading">
                             <h2 id="jpg-preview-title">Pré-visualização das páginas</h2>
                             <span id="jpg-preview-count" aria-live="polite"></span>
@@ -244,14 +244,14 @@
 
             <section id="images-pdf-panel" class="editor-panel" role="tabpanel" aria-labelledby="images-pdf-tab" hidden>
                 <div class="editor-preview-column">
-                    <div class="dropzone editor-center-upload" id="images-pdf-dropzone">
+                    <div class="dropzone editor-center-upload" id="images-pdf-dropzone" data-has-files="false">
                         <button class="center-upload-button" id="images-pdf-upload" type="button">
                             <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
                             <span>Anexe ou arraste imagens JPG</span>
                         </button>
                         <input type="file" id="images-pdf-input" accept=".jpg,.jpeg,image/jpeg" multiple>
                     </div>
-                    <section class="preview-section" aria-labelledby="images-pdf-preview-title">
+                    <section class="preview-section editor-preview-content" id="images-pdf-preview-section" aria-labelledby="images-pdf-preview-title" hidden>
                         <div class="preview-heading">
                             <h2 id="images-pdf-preview-title">Imagens no PDF</h2>
                             <span id="images-pdf-count" aria-live="polite"></span>
@@ -274,14 +274,14 @@
 
             <section id="ocr-panel" class="editor-panel" role="tabpanel" aria-labelledby="ocr-tab" hidden>
                 <div class="editor-preview-column">
-                    <div class="dropzone editor-center-upload" id="ocr-dropzone">
+                    <div class="dropzone editor-center-upload" id="ocr-dropzone" data-has-files="false">
                         <button class="center-upload-button" id="ocr-upload" type="button">
                             <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
                             <span>Anexe ou arraste um PDF para aplicar OCR</span>
                         </button>
                         <input type="file" id="ocr-input" accept=".pdf,application/pdf">
                     </div>
-                    <section class="preview-section" aria-labelledby="ocr-preview-title">
+                    <section class="preview-section editor-preview-content" id="ocr-preview-section" aria-labelledby="ocr-preview-title" hidden>
                         <div class="preview-heading">
                             <h2 id="ocr-preview-title">Pré-visualização das páginas</h2>
                             <span id="ocr-preview-count" aria-live="polite"></span>
