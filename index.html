@@ -16,10 +16,111 @@
     <script>window.docxGenerator = window.docx;</script>
     <script src="https://unpkg.com/docx-preview@0.3.6/dist/docx-preview.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-    <div class="container">
+    <section class="auth-screen" id="auth-screen" aria-labelledby="auth-title" hidden>
+        <section class="auth-card">
+            <img class="app-logo auth-logo" src="img/Logo%20moderno%20de%20editor%20de%20PDF.png" alt="">
+            <h1 id="auth-title">Entre na sua conta</h1>
+            <p id="auth-description">Acesse suas ferramentas de PDF.</p>
+
+            <form id="auth-form">
+                <label class="filename-field auth-field" for="auth-email">
+                    E-mail
+                    <input class="form-control" id="auth-email" type="email" autocomplete="email" required>
+                </label>
+                <label class="filename-field auth-field" for="auth-password">
+                    Senha
+                    <input class="form-control" id="auth-password" type="password" autocomplete="current-password" minlength="8" required>
+                </label>
+                <label class="filename-field auth-field" id="auth-confirm-field" for="auth-confirm-password" hidden>
+                    Confirmar senha
+                    <input class="form-control" id="auth-confirm-password" type="password" autocomplete="new-password" minlength="8">
+                </label>
+                <button class="btn btn-primary auth-submit" id="auth-submit" type="submit">Entrar</button>
+            </form>
+
+            <button class="auth-link" id="auth-forgot-button" type="button">Esqueci minha senha</button>
+            <button class="auth-link" id="auth-mode-button" type="button">Ainda não tem uma conta? Cadastre-se</button>
+            <button class="auth-link" id="auth-continue-button" type="button">Continuar sem entrar</button>
+            <div class="auth-message" id="auth-message" role="status" aria-live="polite"></div>
+        </section>
+    </section>
+
+    <section class="profile-screen" id="profile-screen" hidden aria-labelledby="profile-title">
+        <section class="profile-card" aria-labelledby="profile-title">
+            <header class="profile-header">
+                <div>
+                    <h1 id="profile-title">Meu perfil</h1>
+                    <p>Gerencie seus dados e veja sua atividade recente.</p>
+                </div>
+                <button class="auth-logout" id="profile-back" type="button">
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                    Voltar ao editor
+                </button>
+            </header>
+
+            <div class="profile-grid">
+                <form class="profile-section" id="profile-form">
+                    <h2>Dados do perfil</h2>
+                    <div class="profile-avatar-row">
+                        <div class="profile-avatar-frame">
+                            <img class="profile-avatar-preview" id="profile-avatar-preview" alt="Foto do perfil" hidden>
+                            <i class="bi bi-person-circle profile-avatar-placeholder" id="profile-avatar-placeholder" aria-hidden="true"></i>
+                        </div>
+                        <div>
+                            <label class="profile-file-label" for="profile-avatar-input">Escolher foto</label>
+                            <input class="profile-file-input" id="profile-avatar-input" type="file" accept="image/png,image/jpeg,image/webp">
+                            <p class="option-help">PNG, JPG ou WebP; até 2 MB.</p>
+                        </div>
+                    </div>
+                    <label class="filename-field auth-field" for="profile-name">
+                        Nome
+                        <input class="form-control" id="profile-name" type="text" maxlength="80" autocomplete="name" required>
+                    </label>
+                    <button class="btn btn-primary" id="profile-save" type="submit">Salvar perfil</button>
+                </form>
+
+                <section class="profile-section" aria-labelledby="profile-history-title">
+                    <h2 id="profile-history-title">Últimos arquivos editados</h2>
+                    <p class="option-help">Os arquivos são processados no seu navegador; apenas nome, serviço e data ficam no histórico.</p>
+                    <ol class="profile-history" id="profile-history"></ol>
+                    <p class="profile-history-empty" id="profile-history-empty" hidden>Nenhum arquivo editado ainda.</p>
+                </section>
+
+                <section class="profile-section">
+                    <h2>Senha</h2>
+                    <p class="option-help">Altere a senha da sua conta Supabase.</p>
+                    <button class="btn btn-primary" id="profile-change-password" type="button">Alterar minha senha</button>
+                </section>
+
+                <section class="profile-section profile-danger">
+                    <h2>Excluir conta</h2>
+                    <p>A exclusão é permanente e remove seus dados de perfil e histórico.</p>
+                    <details class="profile-delete-details">
+                        <summary>Quero excluir minha conta</summary>
+                        <form id="profile-delete-form">
+                            <p>Para confirmar, informe sua senha atual e digite <strong>EXCLUIR</strong>.</p>
+                            <label class="filename-field auth-field" for="profile-delete-password">
+                                Senha atual
+                                <input class="form-control" id="profile-delete-password" type="password" autocomplete="current-password" required>
+                            </label>
+                            <label class="filename-field auth-field" for="profile-delete-confirmation">
+                                Digite EXCLUIR
+                                <input class="form-control" id="profile-delete-confirmation" type="text" autocomplete="off" pattern="EXCLUIR" required>
+                            </label>
+                            <button class="btn btn-danger" id="profile-delete-submit" type="submit">Excluir minha conta permanentemente</button>
+                        </form>
+                    </details>
+                </section>
+            </div>
+            <div class="auth-message" id="profile-message" role="status" aria-live="polite"></div>
+        </section>
+    </section>
+
+    <div class="container" id="app-container">
         <header class="app-header">
             <div class="app-brand">
                 <img class="app-logo" src="img/Logo%20moderno%20de%20editor%20de%20PDF.png" alt="Logo do editor de PDF">
@@ -28,9 +129,23 @@
                     <p>Junte PDFs, extraia páginas, aplique OCR ou converta documentos e imagens.</p>
                 </div>
             </div>
-            <button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false">
-                <i class="bi bi-moon-fill" id="theme-icon" aria-hidden="true"></i>
-            </button>
+            <div class="app-header-actions">
+                <div class="auth-user" id="auth-user" hidden>
+                    <button class="profile-trigger" id="profile-open" type="button">
+                        <img class="profile-trigger-avatar" id="auth-user-avatar" alt="" hidden>
+                        <i class="bi bi-person-circle profile-trigger-placeholder" id="auth-user-avatar-placeholder" aria-hidden="true"></i>
+                        <span id="auth-user-name"></span>
+                    </button>
+                    <button class="auth-logout" id="auth-logout" type="button">Sair</button>
+                </div>
+                <button class="auth-logout" id="auth-login-open" type="button" hidden>
+                    <i class="bi bi-person-circle" aria-hidden="true"></i>
+                    Entrar
+                </button>
+                <button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false">
+                    <i class="bi bi-moon-fill" id="theme-icon" aria-hidden="true"></i>
+                </button>
+            </div>
         </header>
 
         <div class="editor-layout">
@@ -316,5 +431,6 @@
     </div>
 
     <script src="JavaScript.js"></script>
+    <script src="Autenticacao.js"></script>
 </body>
 </html>

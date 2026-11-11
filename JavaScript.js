@@ -299,6 +299,24 @@ function showStatus(message, color = 'var(--text-main)') {
     statusMsg.innerText = message;
 }
 
+async function showFileResult(fileName, service, successMessage, successColor = '#16a34a') {
+    try {
+        if (typeof window.recordFileHistory !== 'function') {
+            throw new Error('O serviço de histórico não está disponível.');
+        }
+        const recorded = await window.recordFileHistory(fileName, service);
+        if (!recorded) {
+            showStatus(successMessage, successColor);
+            return;
+        }
+        showStatus(successMessage, successColor);
+    } catch (error) {
+        console.error('O arquivo foi criado, mas não foi possível salvar no histórico.', error);
+        const details = error instanceof Error ? error.message : String(error);
+        showStatus(`${successMessage}\n⚠️ O histórico não foi salvo. Detalhe: ${details}`, '#b7791f');
+    }
+}
+
 function getSafeOutputName(input) {
     return input.value
         .trim()
@@ -514,7 +532,11 @@ wordConvertButton.addEventListener('click', async () => {
         });
         const blob = await window.docxGenerator.Packer.toBlob(document);
         downloadFile(blob, `${outputName}.docx`);
-        showStatus(`✅ Sucesso! O arquivo ${outputName}.docx foi baixado.`, '#16a34a');
+        await showFileResult(
+            `${outputName}.docx`,
+            'pdf-to-word',
+            `✅ Sucesso! O arquivo ${outputName}.docx foi baixado.`
+        );
     } catch (error) {
         console.error(error);
         const details = error instanceof Error ? error.message : String(error);
@@ -619,7 +641,11 @@ wordPdfConvertButton.addEventListener('click', async () => {
             })
             .from(wordPdfContent)
             .save();
-        showStatus(`✅ Sucesso! O arquivo ${outputName}.pdf foi baixado.`, '#16a34a');
+        await showFileResult(
+            `${outputName}.pdf`,
+            'word-to-pdf',
+            `✅ Sucesso! O arquivo ${outputName}.pdf foi baixado.`
+        );
     } catch (error) {
         console.error(error);
         const details = error instanceof Error ? error.message : String(error);
@@ -784,7 +810,11 @@ jpgConvertButton.addEventListener('click', async () => {
             showStatus(`⏳ Compactando imagens: ${Math.round(progress.percent)}%`);
         });
         downloadFile(zipBlob, `${outputName}.zip`);
-        showStatus(`✅ Sucesso! ${sourceDocument.numPages} imagem(ns) JPG foram baixadas em ${outputName}.zip.`, '#16a34a');
+        await showFileResult(
+            `${outputName}.zip`,
+            'pdf-to-jpg',
+            `✅ Sucesso! ${sourceDocument.numPages} imagem(ns) JPG foram baixadas em ${outputName}.zip.`
+        );
     } catch (error) {
         console.error(error);
         const details = error instanceof Error ? error.message : String(error);
@@ -982,7 +1012,12 @@ ocrConvertButton.addEventListener('click', async () => {
         const warning = pagesWithoutText
             ? ` ${pagesWithoutText} página(s) não tiveram texto reconhecido.`
             : '';
-        showStatus(`✅ OCR concluído. O arquivo ${outputName}.pdf está pronto para pesquisa.${warning}`, pagesWithoutText ? '#b7791f' : '#16a34a');
+        await showFileResult(
+            `${outputName}.pdf`,
+            'ocr-pdf',
+            `✅ OCR concluído. O arquivo ${outputName}.pdf está pronto para pesquisa.${warning}`,
+            pagesWithoutText ? '#b7791f' : '#16a34a'
+        );
     } catch (error) {
         console.error(error);
         const details = error instanceof Error ? error.message : String(error);
@@ -1138,7 +1173,11 @@ imagesPdfConvertButton.addEventListener('click', async () => {
 
         const pdfBytes = await pdfDocument.save();
         downloadPdf(pdfBytes, outputName);
-        showStatus(`✅ Sucesso! ${filesToConvert.length} imagem(ns) foram convertidas para ${outputName}.pdf.`, '#16a34a');
+        await showFileResult(
+            `${outputName}.pdf`,
+            'jpg-to-pdf',
+            `✅ Sucesso! ${filesToConvert.length} imagem(ns) foram convertidas para ${outputName}.pdf.`
+        );
     } catch (error) {
         console.error(error);
         const details = error instanceof Error ? error.message : String(error);
@@ -1716,7 +1755,11 @@ mergeBtn.addEventListener('click', async () => {
             mergePreviewResultGeneration = -1;
         }
 
-        showStatus('✅ Sucesso! O arquivo novo foi baixado.', '#16a34a');
+        await showFileResult(
+            `${outputName}.pdf`,
+            'merge-pdf',
+            '✅ Sucesso! O arquivo novo foi baixado.'
+        );
     } catch (error) {
         console.error(error);
         const details = error instanceof Error ? error.message : String(error);
@@ -1929,14 +1972,22 @@ extractBtn.addEventListener('click', async () => {
             showStatus('⏳ Compactando os PDFs fracionados...');
             const zipBlob = await zip.generateAsync({ type: 'blob' });
             downloadFile(zipBlob, `${outputName}.zip`);
-            showStatus(`✅ Sucesso! ${partNumber} PDF(s) baixado(s) no arquivo ${outputName}.zip.`, '#16a34a');
+            await showFileResult(
+                `${outputName}.zip`,
+                'extract-pages',
+                `✅ Sucesso! ${partNumber} PDF(s) baixado(s) no arquivo ${outputName}.zip.`
+            );
         } else {
             const extractedPdf = await PDFLib.PDFDocument.create();
             const pages = Array.from(singleExtractPages, (page) => page - 1).sort((a, b) => a - b);
             const copiedPages = await extractedPdf.copyPages(sourcePdf, pages);
             copiedPages.forEach((page) => extractedPdf.addPage(page));
             downloadPdf(await extractedPdf.save(), outputName);
-            showStatus(`✅ Sucesso! O arquivo ${outputName}.pdf foi baixado.`, '#16a34a');
+            await showFileResult(
+                `${outputName}.pdf`,
+                'extract-pages',
+                `✅ Sucesso! O arquivo ${outputName}.pdf foi baixado.`
+            );
         }
     } catch (error) {
         console.error(error);
